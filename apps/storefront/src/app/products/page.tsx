@@ -19,30 +19,43 @@ export default async function ProductsPage({
   const items = i.data;
   const error = c.failed || i.failed;
   const products = groupProducts(items);
-
-  const chip = (active: boolean) =>
-    `rounded-full border px-4 py-2 text-sm ${active ? "border-accent bg-accent text-accent-fg" : "border-line bg-surface hover:border-accent"}`;
+  const activeName = cats.find((x) => x.id === cat)?.name;
 
   return (
-    <div className="space-y-5">
-      <h1 className="text-2xl font-bold">{query ? `نتائج البحث: ${query}` : "المنتجات"}</h1>
-      <nav aria-label="الأقسام" className="flex flex-wrap gap-2">
-        <Link href="/products" className={chip(!cat)}>
-          الكل
-        </Link>
-        {cats.map((c) => (
-          <Link key={c.id} href={`/products?category=${c.id}`} className={chip(cat === c.id)}>
-            {c.name}
-          </Link>
-        ))}
+    <div className="space-y-6">
+      <header className="space-y-1">
+        <h1 className="text-3xl font-extrabold sm:text-4xl">{query ? `نتائج: ${query}` : (activeName ?? "كل المنتجات")}</h1>
+        {!error && <p className="text-sm text-muted">{products.length} منتج</p>}
+      </header>
+
+      <nav aria-label="الأقسام" className="sticky top-14 z-20 -mx-4 bg-bg/90 px-4 py-2 backdrop-blur md:top-16">
+        <ul className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <li>
+            <Link href="/products" className="chip block" aria-current={!cat && !query ? "true" : undefined}>
+              الكل
+            </Link>
+          </li>
+          {cats.map((x) => (
+            <li key={x.id}>
+              <Link href={`/products?category=${x.id}`} className="chip block" aria-current={cat === x.id ? "true" : undefined}>
+                {x.name}
+              </Link>
+            </li>
+          ))}
+        </ul>
       </nav>
+
       {error && (
-        <p role="alert" className="rounded-xl border border-line bg-surface p-6 text-center text-muted">
+        <p role="alert" className="card p-8 text-center text-muted">
           تعذّر تحميل المنتجات الآن. حاول مرة أخرى بعد قليل.
         </p>
       )}
       {!error && products.length === 0 && (
-        <p className="rounded-xl border border-line bg-surface p-6 text-center text-muted">لا توجد منتجات مطابقة.</p>
+        <div className="card space-y-3 p-10 text-center">
+          <p className="text-lg font-bold">لا توجد منتجات مطابقة</p>
+          <p className="text-sm text-muted">جرّب كلمة أخرى أو تصفح كل المنتجات.</p>
+          <Link href="/products" className="btn-primary">عرض كل المنتجات</Link>
+        </div>
       )}
       {products.length > 0 && <ProductGrid products={products} />}
     </div>

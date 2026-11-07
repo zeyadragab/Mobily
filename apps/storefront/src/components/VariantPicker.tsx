@@ -31,8 +31,10 @@ export default function VariantPicker({ items }: { items: V[] }) {
   }
 
   return (
-    <div className="space-y-4">
-      <p className="text-3xl font-bold">{egp(v.price)}</p>
+    <div className="card space-y-5 p-5">
+      <p key={v.variant_id} className="rise bg-(image:--brand-gradient) bg-clip-text text-4xl font-extrabold text-transparent">
+        {egp(v.price)}
+      </p>
 
       {items.length > 1 && (
         <fieldset>
@@ -41,8 +43,10 @@ export default function VariantPicker({ items }: { items: V[] }) {
             {items.map((i) => (
               <label
                 key={i.variant_id}
-                className={`cursor-pointer rounded-xl border px-4 py-2 text-sm has-[:focus-visible]:outline-2 ${
-                  sel === i.variant_id ? "border-accent bg-accent text-accent-fg" : "border-line bg-surface hover:border-accent"
+                className={`cursor-pointer rounded-2xl border px-4 py-2.5 text-sm font-medium transition has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${
+                  sel === i.variant_id
+                    ? "border-accent bg-accent/10 text-accent ring-2 ring-accent/30"
+                    : "border-line bg-surface hover:border-accent"
                 } ${i.available === 0 ? "opacity-60" : ""}`}
               >
                 <input
@@ -63,28 +67,26 @@ export default function VariantPicker({ items }: { items: V[] }) {
         </fieldset>
       )}
 
-      <p className="text-sm" role="status">
+      <p className="flex flex-wrap items-center gap-2 text-sm" role="status">
         {v.available === 0 ? (
-          <span className="text-danger">غير متوفر حاليًا</span>
+          <span className="rounded-full bg-danger/10 px-3 py-1 font-semibold text-danger">غير متوفر حاليًا</span>
         ) : v.available <= 2 ? (
-          <span className="text-warn">كمية محدودة ({v.available === 1 ? "قطعة واحدة" : "قطعتان"} فقط)</span>
+          <span className="rounded-full bg-warn/10 px-3 py-1 font-semibold text-warn">
+            كمية محدودة ({v.available === 1 ? "قطعة واحدة" : "قطعتان"} فقط)
+          </span>
         ) : (
-          <span className="text-ok">متوفر</span>
+          <span className="rounded-full bg-ok/10 px-3 py-1 font-semibold text-ok">متوفر</span>
         )}
-        <span className="text-muted"> · الحالة: {CONDITION_AR[v.condition]}</span>
+        <span className="text-muted">الحالة: {CONDITION_AR[v.condition]}</span>
       </p>
 
       <div className="flex flex-wrap gap-3">
-        <button
-          onClick={add}
-          disabled={!canAdd}
-          className="rounded-xl bg-accent px-6 py-3 font-semibold text-accent-fg disabled:cursor-not-allowed disabled:opacity-50"
-        >
+        <button onClick={add} disabled={!canAdd} className="btn-primary btn-shine flex-1 sm:flex-none">
           {v.available === 0 ? "غير متوفر" : canAdd ? "أضف للسلة" : "وصلت للحد الأقصى"}
         </button>
         {added && (
-          <Link href="/cart" className="rounded-xl border border-line px-6 py-3 font-semibold">
-            عرض السلة
+          <Link href="/cart" className="btn-ghost rise">
+            عرض السلة ←
           </Link>
         )}
       </div>

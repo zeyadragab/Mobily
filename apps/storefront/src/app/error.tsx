@@ -11,12 +11,12 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
 
   return (
     <div role="alert" className="mx-auto flex max-w-md flex-col items-center gap-3 py-20 text-center">
-      <h1 className="text-2xl font-bold">حدث خطأ غير متوقع</h1>
+      <h1 className="text-2xl font-extrabold">حدث خطأ غير متوقع</h1>
       <p className="text-sm text-muted">
         حاول مرة أخرى. لو تكرر الخطأ تواصل معنا واذكر الرقم المرجعي:{" "}
         <span className="font-mono">{error.digest ?? "—"}</span>
       </p>
-      <button onClick={reset} className="rounded-xl bg-accent px-6 py-3 font-semibold text-accent-fg">
+      <button onClick={reset} className="btn-primary">
         إعادة المحاولة
       </button>
     </div>

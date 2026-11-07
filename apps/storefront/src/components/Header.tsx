@@ -28,6 +28,13 @@ export default function Header({ categories }: { categories: { id: string; name:
   const [drawer, setDrawer] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   useEffect(() => {
     if (!drawer) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setDrawer(false);
@@ -53,7 +60,7 @@ export default function Header({ categories }: { categories: { id: string; name:
   );
 
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur">
+    <header className={`sticky top-0 z-30 border-b border-line bg-surface/90 backdrop-blur-md transition-shadow duration-300 ${scrolled ? "shadow-(--shadow-card)" : ""}`}>
       <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-3">
         <button
           aria-label="القائمة"

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { loadOrders, type SavedOrder } from "@/lib/orders";
 
-const field = "w-full rounded-lg border border-line bg-bg px-3 py-3 text-base outline-none focus:border-accent";
+const field = "field";
 
 export default function TrackPage() {
   const router = useRouter();
@@ -26,7 +26,7 @@ export default function TrackPage() {
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
-      <h1 className="text-2xl font-bold">تتبع طلبي</h1>
+      <h1 className="text-3xl font-extrabold">تتبع طلبي</h1>
 
       {saved.length > 0 && (
         <section className="space-y-2">
@@ -34,7 +34,7 @@ export default function TrackPage() {
           <ul className="space-y-2">
             {saved.map((o) => (
               <li key={o.number}>
-                <Link href={`/order/${o.number}?t=${o.token}`} className="flex justify-between rounded-xl border border-line bg-surface px-4 py-3 hover:border-accent">
+                <Link href={`/order/${o.number}?t=${o.token}`} className="card flex justify-between px-5 py-4 transition hover:-translate-y-0.5 hover:border-accent">
                   <span dir="ltr" className="font-semibold">{o.number}</span>
                   <span className="text-sm text-muted">عرض الحالة</span>
                 </Link>
@@ -44,7 +44,7 @@ export default function TrackPage() {
         </section>
       )}
 
-      <form onSubmit={go} className="space-y-3 rounded-2xl border border-line bg-surface p-5">
+      <form onSubmit={go} className="card space-y-4 p-6">
         <h2 className="font-semibold">أو أدخل بيانات الطلب</h2>
         <label className="block space-y-1">
           <span className="text-sm text-muted">رقم الطلب</span>
@@ -54,7 +54,7 @@ export default function TrackPage() {
           <span className="text-sm text-muted">رمز التتبع (من رابط الطلب)</span>
           <input className={field} dir="ltr" required value={code} onChange={(e) => setCode(e.target.value)} />
         </label>
-        <button className="w-full rounded-xl bg-accent py-3 font-semibold text-accent-fg">عرض الحالة</button>
+        <button className="btn-primary btn-shine w-full">عرض الحالة</button>
       </form>
     </div>
   );

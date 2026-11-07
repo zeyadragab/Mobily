@@ -3,6 +3,7 @@ import { IBM_Plex_Sans_Arabic } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import TabBar from "@/components/TabBar";
+import ScrollProgress from "@/components/motion/ScrollProgress";
 import { STORE_NAME } from "@/lib/supabase";
 import { fetchCategories, safe } from "@/lib/catalog";
 
@@ -29,6 +30,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-accent focus:p-3 focus:text-white">
           تخطي إلى المحتوى
         </a>
+        <ScrollProgress />
         <div className="bg-(image:--brand-gradient) px-4 py-2 text-center text-xs font-medium text-white sm:text-sm">
           احجز مجانًا لمدة 24 ساعة · استلام من المحل أو توصيل · الدفع عند التأكيد
         </div>

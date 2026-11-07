@@ -23,7 +23,7 @@ const ERRORS: [RegExp, string][] = [
   [/address required/i, "العنوان مطلوب للتوصيل."],
 ];
 
-const field = "w-full rounded-lg border border-line bg-bg px-3 py-3 text-base outline-none focus:border-accent";
+const field = "field";
 
 export default function Checkout() {
   const { lines, total } = useCart();
@@ -37,9 +37,9 @@ export default function Checkout() {
 
   if (lines.length === 0) {
     return (
-      <div className="mx-auto max-w-md space-y-4 py-16 text-center">
+      <div className="card mx-auto max-w-md space-y-4 p-10 text-center">
         <h1 className="text-2xl font-bold">السلة فارغة</h1>
-        <Link href="/products" className="inline-block rounded-xl bg-accent px-6 py-3 font-semibold text-accent-fg">
+        <Link href="/products" className="btn-primary">
           تصفح المنتجات
         </Link>
       </div>
@@ -103,8 +103,8 @@ export default function Checkout() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
-      <form onSubmit={submit} className="space-y-4 rounded-2xl border border-line bg-surface p-5 lg:col-span-2">
-        <h1 className="text-2xl font-bold">بيانات الحجز</h1>
+      <form onSubmit={submit} className="card space-y-5 p-5 sm:p-7 lg:col-span-2">
+        <h1 className="text-3xl font-extrabold">بيانات الحجز</h1>
 
         <label className="block space-y-1">
           <span className="text-sm text-muted">الاسم *</span>
@@ -119,7 +119,7 @@ export default function Checkout() {
           <legend className="text-sm text-muted">طريقة الاستلام</legend>
           <div className="flex flex-wrap gap-2">
             {([["pickup", "استلام من المحل"], ["delivery", "توصيل"]] as const).map(([k, l]) => (
-              <label key={k} className={`cursor-pointer rounded-xl border px-4 py-3 text-sm ${f.fulfilment === k ? "border-accent bg-accent text-accent-fg" : "border-line hover:border-accent"}`}>
+              <label key={k} className={`cursor-pointer rounded-2xl border px-5 py-3 text-sm font-medium transition has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${f.fulfilment === k ? "border-accent bg-accent/10 text-accent ring-2 ring-accent/30" : "border-line bg-surface hover:border-accent"}`}>
                 <input type="radio" className="sr-only" name="fulfilment" checked={f.fulfilment === k} onChange={() => setF({ ...f, fulfilment: k })} />
                 {l}
               </label>
@@ -158,7 +158,7 @@ export default function Checkout() {
             {error}
           </p>
         )}
-        <button disabled={busy} className="w-full rounded-xl bg-accent py-3 font-semibold text-accent-fg disabled:opacity-50">
+        <button disabled={busy} className="btn-primary btn-shine w-full">
           {busy ? "جارٍ الحجز…" : "تأكيد الحجز"}
         </button>
         <p className="text-xs text-muted">
@@ -166,8 +166,8 @@ export default function Checkout() {
         </p>
       </form>
 
-      <aside className="h-fit space-y-3 rounded-2xl border border-line bg-surface p-5">
-        <h2 className="font-bold">طلبك</h2>
+      <aside className="card h-fit space-y-3 p-6 lg:sticky lg:top-24">
+        <h2 className="text-lg font-extrabold">طلبك</h2>
         <ul className="space-y-2 text-sm">
           {lines.map((l) => (
             <li key={l.variant_id} className="flex justify-between gap-2">

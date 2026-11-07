@@ -45,7 +45,7 @@ export default function OrderStatus({ number }: { number: string }) {
     };
   }, [number, token]);
 
-  if (order === undefined && !failed) return <p className="py-16 text-center text-muted">جارٍ التحميل…</p>;
+  if (order === undefined && !failed) return <p className="card mx-auto max-w-md animate-pulse p-10 text-center text-muted">جارٍ التحميل…</p>;
   if (failed && order === undefined)
     return (
       <p role="alert" className="py-16 text-center text-danger">
@@ -54,10 +54,10 @@ export default function OrderStatus({ number }: { number: string }) {
     );
   if (order === null || order === undefined)
     return (
-      <div className="mx-auto max-w-md space-y-3 py-16 text-center">
+      <div className="card mx-auto max-w-md space-y-3 p-10 text-center">
         <h1 className="text-2xl font-bold">لم نجد الطلب</h1>
         <p className="text-muted">تأكد من الرابط أو من رقم الطلب والرمز.</p>
-        <Link href="/track" className="inline-block rounded-xl border border-line px-5 py-2">
+        <Link href="/track" className="btn-ghost">
           جرّب من صفحة التتبع
         </Link>
       </div>
@@ -70,14 +70,14 @@ export default function OrderStatus({ number }: { number: string }) {
     <div className="mx-auto max-w-2xl space-y-5">
       <div>
         <p className="text-sm text-muted">رقم الطلب</p>
-        <h1 className="text-2xl font-bold" dir="ltr">
+        <h1 className="text-3xl font-extrabold" dir="ltr">
           {order.order_number}
         </h1>
         <p className="text-sm text-muted">{fmt(order.created_at)}</p>
       </div>
 
-      <div className={`rounded-2xl border p-4 ${dead ? "border-danger/40 bg-danger/10" : "border-line bg-surface"}`} role="status">
-        <p className="font-semibold">{STATUS_AR[order.status]}</p>
+      <div className={`rounded-3xl border p-5 ${dead ? "border-danger/40 bg-danger/10" : "border-accent/30 bg-accent/5"}`} role="status">
+        <p className="text-lg font-extrabold">{STATUS_AR[order.status]}</p>
         {order.status === "reserved" && (
           <p className="mt-1 text-sm text-muted">
             القطعة محجوزة لك حتى {fmt(order.reserved_until)}. سيتواصل معك المحل لتأكيد الطلب.
@@ -91,14 +91,14 @@ export default function OrderStatus({ number }: { number: string }) {
         <ol className="grid grid-cols-4 gap-2 text-center text-xs" aria-label="مراحل الطلب">
           {STEPS.map((s, i) => (
             <li key={s} className={i <= idx ? "font-semibold" : "text-muted"}>
-              <span className={`mx-auto mb-1 block h-2 rounded-full ${i <= idx ? "bg-accent" : "bg-line"}`} />
+              <span className={`mx-auto mb-1 block h-2 rounded-full transition-colors duration-700 ${i <= idx ? "bg-(image:--brand-gradient)" : "bg-line"}`} />
               {s === "reserved" ? "محجوز" : s === "confirmed" ? "مؤكد" : s === "ready" ? "جاهز" : "تم التسليم"}
             </li>
           ))}
         </ol>
       )}
 
-      <div className="space-y-2 rounded-2xl border border-line bg-surface p-4">
+      <div className="card space-y-2 p-5">
         <p className="text-sm text-muted">{order.fulfilment === "pickup" ? "الاستلام من المحل" : "التوصيل"}</p>
         <ul className="space-y-2 text-sm">
           {order.lines.map((l, i) => (
