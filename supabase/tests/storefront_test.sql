@@ -37,6 +37,11 @@ begin
   perform set_config('request.jwt.claims', '{"role":"anon"}', true);
   set local role anon;
 end $$;
+create or replace function pg_temp.as_service() returns void language plpgsql as $$
+begin
+  perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  set local role service_role;
+end $$;
 create or replace function pg_temp.rec(t text, ok boolean, d text default '') returns void
 language sql as $$ insert into t_results(test, ok, detail) values (t, ok, d); $$;
 
@@ -63,7 +68,7 @@ end $$;
 
 -- 3. anon cannot order an unpublished item
 do $$ declare f boolean := false; begin
-  perform pg_temp.as_anon();
+  perform pg_temp.as_service();
   begin perform public.place_online_order('عميل','01012345678',null,'pickup',null,
     jsonb_build_array(jsonb_build_object('variant_id','00000000-0000-0000-0000-00000000a102','qty',1)));
   exception when others then f := true; end; reset role;
@@ -74,7 +79,7 @@ end $$;
 create temp table t_order(num text, tok text);
 grant all on t_order to public;
 do $$ declare r jsonb; begin
-  perform pg_temp.as_anon();
+  perform pg_temp.as_service();
   r := public.place_online_order('عميل أول','01011111111',null,'pickup',null,
     jsonb_build_array(jsonb_build_object('variant_id','00000000-0000-0000-0000-00000000a101','qty',1)));
   reset role;
@@ -84,7 +89,7 @@ end $$;
 
 -- 5. SECOND buyer of the same piece is refused
 do $$ declare f boolean := false; begin
-  perform pg_temp.as_anon();
+  perform pg_temp.as_service();
   begin perform public.place_online_order('عميل ثان','01022222222',null,'pickup',null,
     jsonb_build_array(jsonb_build_object('variant_id','00000000-0000-0000-0000-00000000a101','qty',1)));
   exception when others then f := true; end; reset role;
@@ -110,7 +115,7 @@ end $$;
 
 -- 8. invalid input is rejected (qty 6, bad phone, delivery without address)
 do $$ declare f1 boolean := false; f2 boolean := false; f3 boolean := false; begin
-  perform pg_temp.as_anon();
+  perform pg_temp.as_service();
   begin perform public.place_online_order('عميل','01033333333',null,'pickup',null,
     jsonb_build_array(jsonb_build_object('variant_id','00000000-0000-0000-0000-00000000a102','qty',6))); exception when others then f1 := true; end;
   begin perform public.place_online_order('عميل','12',null,'pickup',null,
@@ -126,7 +131,7 @@ do $$ declare oid uuid; r jsonb; begin
   select id into oid from public.online_orders where order_number = (select num from t_order);
   perform pg_temp.as_user('00000000-0000-0000-0000-0000000000c1');
   perform public.set_online_order_status(oid, 'cancelled', 'العميل لم يرد'); reset role;
-  perform pg_temp.as_anon();
+  perform pg_temp.as_service();
   r := public.place_online_order('عميل ثالث','01044444444',null,'pickup',null,
     jsonb_build_array(jsonb_build_object('variant_id','00000000-0000-0000-0000-00000000a101','qty',1)));
   reset role;
@@ -161,7 +166,7 @@ end $$;
 do $$ declare i int; f boolean := false; begin
   insert into public.stock_movements(variant_id, branch_id, movement_type, qty)
   values ('00000000-0000-0000-0000-00000000a101','00000000-0000-0000-0000-00000000e001','adjustment', 10);
-  perform pg_temp.as_anon();
+  perform pg_temp.as_service();
   for i in 1..3 loop
     perform public.place_online_order('عميل','01055555555',null,'pickup',null,
       jsonb_build_array(jsonb_build_object('variant_id','00000000-0000-0000-0000-00000000a101','qty',1)));

@@ -2,11 +2,18 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useCallback, useState, type FormEvent } from "react";
 import { cart, useCart } from "@/lib/cart";
 import { egp } from "@/lib/catalog";
 import { supabase } from "@/lib/supabase";
 import { saveOrder } from "@/lib/orders";
+import Turnstile from "@/components/Turnstile";
+
+// Orders go through the `place-order` server function, which checks the CAPTCHA and an IP limit.
+// The old direct database call is kept ONLY for local development when no Turnstile key is configured.
+const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
+const FN_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""}/functions/v1/place-order`;
+const LEGACY_DEV = process.env.NODE_ENV !== "production" && !SITE_KEY;
 
 const ERRORS: [RegExp, string][] = [
   [/not enough stock|item unavailable/i, "إحدى القطع لم تعد متوفرة بالكمية المطلوبة. راجع السلة وحاول مرة أخرى."],
@@ -24,6 +31,9 @@ export default function Checkout() {
   const [f, setF] = useState({ name: "", phone: "", fulfilment: "pickup", address: "", notes: "", website: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [token, setToken] = useState("");
+  const [resetSignal, setResetSignal] = useState(0);
+  const onToken = useCallback((t: string) => setToken(t), []);
 
   if (lines.length === 0) {
     return (
@@ -46,20 +56,46 @@ export default function Checkout() {
     if (phone.length < 10 || phone.length > 15) return setError("رقم الهاتف غير صحيح.");
     if (f.fulfilment === "delivery" && f.address.trim().length < 6) return setError("اكتب العنوان بالتفصيل للتوصيل.");
 
+    if (!LEGACY_DEV && !SITE_KEY) return setError("الحجز غير متاح مؤقتًا. تواصل مع المحل.");
+    if (!LEGACY_DEV && !token) return setError("أكمل التحقق (أنا لست روبوت) أولًا.");
+
     setBusy(true);
-    const { data, error: err } = await supabase.rpc("place_online_order", {
-      p_name: f.name.trim(),
-      p_phone: phone,
-      p_address: f.fulfilment === "delivery" ? f.address.trim() : null,
-      p_fulfilment: f.fulfilment,
-      p_notes: f.notes.trim() || null,
-      p_items: lines.map((l) => ({ variant_id: l.variant_id, qty: l.qty })),
-    });
-    if (err || !data) {
-      setBusy(false);
-      return setError(ERRORS.find(([re]) => re.test(err?.message ?? ""))?.[1] ?? "تعذّر إتمام الحجز. حاول مرة أخرى.");
+    const items = lines.map((l) => ({ variant_id: l.variant_id, qty: l.qty }));
+    const address = f.fulfilment === "delivery" ? f.address.trim() : null;
+    let data: { order_number: string; access_token: string } | null = null;
+    let message = "";
+
+    if (LEGACY_DEV) {
+      const res = await supabase.rpc("place_online_order", {
+        p_name: f.name.trim(), p_phone: phone, p_address: address, p_fulfilment: f.fulfilment,
+        p_notes: f.notes.trim() || null, p_items: items,
+      });
+      data = (res.data as typeof data) ?? null;
+      message = res.error?.message ?? "";
+    } else {
+      try {
+        const res = await fetch(FN_URL, {
+          method: "POST",
+          headers: { "content-type": "application/json", apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "" },
+          body: JSON.stringify({ token, name: f.name.trim(), phone, address, fulfilment: f.fulfilment, notes: f.notes.trim() || null, items }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (res.ok) data = body;
+        else message = body?.error === "order_failed" ? String(body.message ?? "") : String(body?.error ?? "");
+      } catch {
+        message = "network";
+      }
     }
-    const r = data as { order_number: string; access_token: string };
+
+    if (!data) {
+      setBusy(false);
+      setToken("");
+      setResetSignal((n) => n + 1); // a Turnstile token works once: ask for a fresh one
+      if (/captcha_failed/.test(message)) return setError("تعذّر التحقق. أعد المحاولة.");
+      if (/rate_limited/.test(message)) return setError("محاولات كثيرة. حاول بعد قليل أو تواصل مع المحل.");
+      return setError(ERRORS.find(([re]) => re.test(message))?.[1] ?? "تعذّر إتمام الحجز. حاول مرة أخرى.");
+    }
+    const r = data;
     saveOrder({ number: r.order_number, token: r.access_token, at: new Date().toISOString() });
     cart.clear();
     router.push(`/order/${r.order_number}?t=${r.access_token}`);
@@ -109,6 +145,13 @@ export default function Checkout() {
             <input tabIndex={-1} autoComplete="off" value={f.website} onChange={(e) => setF({ ...f, website: e.target.value })} />
           </label>
         </div>
+
+        {!LEGACY_DEV && SITE_KEY && <Turnstile siteKey={SITE_KEY} onToken={onToken} resetSignal={resetSignal} />}
+        {!LEGACY_DEV && !SITE_KEY && (
+          <p role="alert" className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
+            الحجز غير متاح مؤقتًا. تواصل مع المحل.
+          </p>
+        )}
 
         {error && (
           <p role="alert" className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">

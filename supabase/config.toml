@@ -1,0 +1,6 @@
+# Minimal Supabase CLI config. The browser calls this function with a Turnstile token (not a user login),
+# so JWT verification is off; the function authenticates the request itself (CAPTCHA + origin + rate limit).
+project_id = "phonestore"
+
+[functions.place-order]
+verify_jwt = false

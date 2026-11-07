@@ -160,8 +160,8 @@ end $$;
 
 -- 11. web order delivery of a tracked item needs the serial
 do $$ declare r jsonb; oid uuid; f boolean := false; ooid uuid; begin
-  perform set_config('request.jwt.claims', '{"role":"anon"}', true);
-  set local role anon;
+  perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  set local role service_role;
   r := public.place_online_order('عميل ويب','01099999999',null,'pickup',null,
         '[{"variant_id":"00000000-0000-0000-0000-00000000a101","qty":1}]'::jsonb); reset role;
   select id into oid from public.online_orders where order_number = r->>'order_number';
