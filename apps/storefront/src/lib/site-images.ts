@@ -66,3 +66,20 @@ export const SHOWCASE_PHONES: { name: string; brand: string; front: string; back
   { name: "فيفو Y31D", brand: "Vivo", front: M("imgi_166_2026-03-01t092822.408.jpg"), back: M("imgi_167_2026-03-17t114315.240.jpg") },
   { name: "هاتف HMD بأزرار", brand: "HMD", front: M("imgi_109_2025-06-15t103554.678.jpg"), back: M("imgi_110_2025-06-15t103452.692_0af5bba1-8b4b-407f-ac92-a1ee70eb39a9.jpg") },
 ];
+
+/**
+ * Local photos for catalog products that have no real image in the database yet
+ * (empty or a /demo/ placeholder). Key = product id. A real image_url always wins.
+ * NOTE: these are the closest photos available, not always the exact model.
+ */
+export const PRODUCT_IMAGES: Record<string, string> = {
+  "51aadd26-deee-4274-9eaf-2402ef275cc5": M("imgi_139_apple_iphone_15_6gb_ram_128gb_-_pink-1.jpg"), // آيفون 13 (مجدد) - photo is iPhone 15
+  "fc3a8de8-6fba-43e0-a1a9-c1315aa0d38f": M("imgi_147_2026-01-28t180301.667.jpg"), // ريدمي نوت 13 - photo is Redmi Note 15 Pro
+  "c36d5d99-fe8a-4d9b-a1c3-596b57e8398c": M("imgi_160_sdsdsd.jpg"), // ريدمي 13C - photo is Redmi A7 Pro
+  "73dad152-d1b2-478e-81ca-73ebeaa8de82": M("imgi_159_sdscscsdc.jpg"), // ريدمي 13 - Redmi photo
+  "aa9179ff-08b9-4ede-8557-c4c40774db7c": M("imgi_155_rbgrbrbrgb_1.jpg"), // إنفينكس هوت 40 - Infinix photo
+  "65fea6e3-5ae2-40c6-8514-44485cfd29a1": M("imgi_115_2026-01-06t141122.868.jpg"), // أوبو A58 - Oppo photo (dual camera)
+  "ea59f643-33be-4bce-8039-72e01982e40c": M("imgi_131_2025-12-14t101611.666.jpg"), // ريلمي C67 - Realme photo
+  "7c392ceb-2498-4737-ad9c-d7c882bae93d": "/img/imgi_38_business.jpg", // ديل إنسبايرون 15 - Dell laptop photo
+  "94f388ae-abf0-4fb4-9f36-7cd6f665d882": "/img/imgi_39_Flip.jpg", // إتش بي 15 رايزن 5 - HP laptop photo
+};

@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { PRODUCT_IMAGES } from "./site-images";
 
 export type Item = {
   variant_id: string;
@@ -42,14 +43,14 @@ export async function fetchItems(opts: { category?: string; q?: string } = {}): 
   }
   const { data, error } = await query.limit(500);
   if (error) throw new Error(error.message);
-  return (data ?? []) as Item[];
+  return withLocalImages((data ?? []) as Item[]);
 }
 
 export async function fetchProduct(id: string): Promise<Item[]> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return [];
   const { data, error } = await supabase.from("catalog_items").select(COLS).eq("product_id", id);
   if (error) throw new Error(error.message);
-  return (data ?? []) as Item[];
+  return withLocalImages((data ?? []) as Item[]);
 }
 
 export async function fetchCategories(): Promise<{ id: string; name: string }[]> {
@@ -97,4 +98,13 @@ export function egp(n: number | string) {
 
 export function variantTitle(i: Pick<Item, "storage" | "color" | "condition">) {
   return [i.storage, i.color, i.condition !== "new" ? CONDITION_AR[i.condition] : null].filter(Boolean).join(" / ") || "الإصدار الأساسي";
+}
+
+/** Fills missing/placeholder product images from the local photo map. */
+function withLocalImages(items: Item[]): Item[] {
+  return items.map((i) => {
+    const local = PRODUCT_IMAGES[i.product_id];
+    const missing = !i.image_url || i.image_url.startsWith("/demo/");
+    return local && missing ? { ...i, image_url: local } : i;
+  });
 }

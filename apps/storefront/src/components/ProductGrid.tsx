@@ -5,7 +5,7 @@ import Reveal from "./motion/Reveal";
 
 export function Thumb({ name, src, className = "" }: { name: string; src: string | null; className?: string }) {
   return (
-    <div className={`relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl bg-linear-to-br from-blue-50 to-slate-100 ${className}`}>
+    <div className={`relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl bg-white ${className}`}>
       {src ? (
         <Image
           src={src}
