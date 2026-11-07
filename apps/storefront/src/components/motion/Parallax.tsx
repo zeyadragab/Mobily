@@ -20,13 +20,16 @@ export default function Parallax({
   useEffect(() => {
     const el = ref.current;
     if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // Measure the untransformed parent so our own movement never feeds back into the maths.
+    const anchor = el.parentElement ?? el;
     let raf = 0;
     let visible = true;
 
     const update = () => {
       raf = 0;
-      const r = el.getBoundingClientRect();
-      const offset = (r.top + r.height / 2 - window.innerHeight / 2) * speed;
+      const r = anchor.getBoundingClientRect();
+      const raw = (r.top + r.height / 2 - window.innerHeight / 2) * speed;
+      const offset = Math.max(-80, Math.min(80, raw));
       el.style.transform = `translate3d(0, ${offset.toFixed(1)}px, 0)`;
     };
     const onScroll = () => {
@@ -34,9 +37,9 @@ export default function Parallax({
     };
     const io = new IntersectionObserver(([e]) => {
       visible = e.isIntersecting;
-      if (visible) onScroll();
+      if (visible) update();
     });
-    io.observe(el);
+    io.observe(anchor);
     update();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {

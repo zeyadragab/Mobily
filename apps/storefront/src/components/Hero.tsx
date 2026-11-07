@@ -13,7 +13,7 @@ const CHIPS = [
 export default function Hero() {
   return (
     <section aria-label="مرحبًا" className="relative isolate min-h-136 overflow-hidden rounded-[2rem] bg-slate-950 text-white sm:min-h-128">
-      <Parallax speed={0.08} className="absolute -inset-y-10 inset-x-0 -z-20">
+      <Parallax speed={0.08} className="absolute -inset-y-14 inset-x-0 -z-20">
         <Image
           src={SITE_IMAGES.hero}
           alt="هاتف قابل للطي بلون بنفسجي"

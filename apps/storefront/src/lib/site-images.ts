@@ -5,6 +5,8 @@
 export const SITE_IMAGES = {
   /** Wide hero picture (phone on the left, dark purple background on the right). */
   hero: "/img/imgi_1217_new-z-fold.jpg",
+  /** Closing call-to-action banner (white background, phone on the right). */
+  cta: "/img/imgi_91_VIVO-V80-Web-Banner-ava.jpg",
 } as const;
 
 /** First matching keyword in the category name wins. No match = colored gradient tile. */
