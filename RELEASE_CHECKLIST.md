@@ -3,16 +3,17 @@ Date: 2026-11-07 (Africa/Cairo)
 Assistant(s): Claude Code (Sonnet 5.5)
 Commit range: N/A - the project is NOT under version control (no git repository)
 
-## 1. Scope and change review: FAIL
-- Evidence: `git rev-parse` -> "not a git repository". No commit range can be reviewed.
-- Action: create a git repository and a GitHub repo, commit the current state, protect `main`.
+## 1. Scope and change review: PARTIAL (local git done; GitHub + branch protection pending)
+- Update: git repository created on branch `main`; first commit `9d8f393` (113 files). The release range is the whole initial commit; later releases can be diffed against it.
+- Still to do: create the GitHub repository (private), push, protect `main` (required review + status checks), connect Vercel to it.
 - High-risk areas present: authentication, authorization (RLS), money/cash handling, customer phone numbers and addresses (web orders), supplier payments, IMEI traceability, public order endpoint.
 
 ## 2. Secrets and sensitive data: PASS (scanner not run)
 - Evidence: pattern scan (service_role, sk_live, sk_test, private keys, DB URLs, JWT-like strings) over all source/SQL/JSON/MD/HTML -> 0 hits.
 - `.env` (admin) and `.env.local` (storefront) exist locally and are ignored by each app's `.gitignore` (`.env.*` rule added to admin). Only the Supabase *publishable* key is used in the apps; no service-role key anywhere.
 - No source maps in the admin build; storefront has `productionBrowserSourceMaps: false`.
-- Not done: `gitleaks` (not installed; no git history yet). Run it after the first commit.
+- Update (after first commit): staged-content scan with broad patterns (AWS/Google/GitHub/Slack/OpenAI/Supabase secret keys, JWTs, private keys, `password|secret|api_key|token = <16+ chars>`) -> 0 hits. The real project URL/ref appears in no tracked file. History scan (`git log --all`) -> no `.env*`, `.pem`, `.key` files ever committed; no `sb_publishable_` string in any commit. Only `.env.example` placeholders (empty values) are tracked in both apps.
+- Not done: the `gitleaks` tool itself (not installed; installing it needs a download that the owner has not yet approved). Pattern scan above is the interim evidence.
 - Note: customer PII (name, phone, address) is stored in `online_orders`/`sales_invoices` and appears in `audit_log`; keep audit access to owner/accountant (already enforced).
 
 ## 3. Dependencies: PASS
@@ -69,7 +70,7 @@ Commit range: N/A - the project is NOT under version control (no git repository)
   1. No CAPTCHA / per-IP limit on the public order endpoint (6A-9).
   2. Owner MFA not enabled; password policy and login rate limits not evidenced (6A-6, 6A-7).
   3. No role click-through test and no end-to-end tests; 6 SQL test result tables not seen (section 5).
-  4. No version control (section 1) and no verified backup / restore (section 7).
+  4. No verified backup / restore (section 7). (Version control: done locally, GitHub push pending.)
   5. Everything runs on one project labelled PRODUCTION with test data and no staging.
   6. No server-side error logging/monitoring (6A-13).
 - Medium:
@@ -87,7 +88,7 @@ Approved by: (blank until a human approves)
 1. (Owner, 10 min) Supabase Auth: disable sign-ups; min password length 12; leaked-password protection; confirm login rate limits; enable MFA for the owner account.
 2. (Owner) Dashboard > Database > Advisors: run Security and Performance advisors, send screenshots.
 3. (Owner) Confirm backups on the plan and do one restore test into a new project.
-4. (Assistant) git init + first commit, GitHub repo, run gitleaks.
+4. (Done locally) git init + first commit `9d8f393`. (Owner) create private GitHub repo and push; (Assistant, with approval to download) run gitleaks.
 5. (Assistant + owner) Cloudflare Turnstile account (site key + secret) -> Edge Function in front of `place_online_order`, per-IP limit.
 6. (Assistant) Playwright end-to-end tests for the critical paths; owner creates one test login per role for the click-through.
 7. (Assistant) Connect error monitoring (Sentry) once an account exists.
