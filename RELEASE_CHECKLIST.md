@@ -13,7 +13,8 @@ Commit range: N/A - the project is NOT under version control (no git repository)
 - `.env` (admin) and `.env.local` (storefront) exist locally and are ignored by each app's `.gitignore` (`.env.*` rule added to admin). Only the Supabase *publishable* key is used in the apps; no service-role key anywhere.
 - No source maps in the admin build; storefront has `productionBrowserSourceMaps: false`.
 - Update (after first commit): staged-content scan with broad patterns (AWS/Google/GitHub/Slack/OpenAI/Supabase secret keys, JWTs, private keys, `password|secret|api_key|token = <16+ chars>`) -> 0 hits. The real project URL/ref appears in no tracked file. History scan (`git log --all`) -> no `.env*`, `.pem`, `.key` files ever committed; no `sb_publishable_` string in any commit. Only `.env.example` placeholders (empty values) are tracked in both apps.
-- Not done: the `gitleaks` tool itself (not installed; installing it needs a download that the owner has not yet approved). Pattern scan above is the interim evidence.
+- gitleaks v8.30.1 (official GitHub release, SHA-256 matched the published checksum, run from outside the project): `gitleaks git` over all commits -> "2 commits scanned ... no leaks found"; `gitleaks dir` over apps/admin/src, apps/storefront/src, supabase, .github and the three markdown docs -> "no leaks found" for each. The tool lives only in the assistant's scratch folder, not in the repo.
+- Re-run gitleaks on every release (and add it to CI once the GitHub repo exists).
 - Note: customer PII (name, phone, address) is stored in `online_orders`/`sales_invoices` and appears in `audit_log`; keep audit access to owner/accountant (already enforced).
 
 ## 3. Dependencies: PASS
