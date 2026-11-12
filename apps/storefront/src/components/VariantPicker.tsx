@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { cart, CART_MAX_QTY, useCart } from "@/lib/cart";
 import { CONDITION_AR, egp, variantTitle } from "@/lib/catalog";
+import { useOpenCart } from "./CartDrawer";
 
 type V = {
   variant_id: string;
@@ -14,20 +14,25 @@ type V = {
   condition: "new" | "used" | "refurbished";
   price: number;
   available: number;
+  image_url: string | null;
 };
 
 export default function VariantPicker({ items }: { items: V[] }) {
   const firstInStock = items.find((i) => i.available > 0) ?? items[0];
   const [sel, setSel] = useState(firstInStock.variant_id);
-  const [added, setAdded] = useState(false);
+  const openCart = useOpenCart();
   const { lines } = useCart();
   const v = items.find((i) => i.variant_id === sel) ?? items[0];
   const inCart = lines.find((l) => l.variant_id === v.variant_id)?.qty ?? 0;
   const canAdd = v.available > 0 && inCart < Math.min(CART_MAX_QTY, v.available);
 
   function add() {
-    cart.add({ variant_id: v.variant_id, product_id: v.product_id, name: v.name, variant: variantTitle(v), price: v.price });
-    setAdded(true);
+    if (!canAdd) return;
+    cart.add({
+      variant_id: v.variant_id, product_id: v.product_id, name: v.name, variant: variantTitle(v),
+      price: v.price, image_url: v.image_url, available: v.available,
+    });
+    openCart(v.name);
   }
 
   return (
@@ -54,10 +59,7 @@ export default function VariantPicker({ items }: { items: V[] }) {
                   name="variant"
                   className="sr-only"
                   checked={sel === i.variant_id}
-                  onChange={() => {
-                    setSel(i.variant_id);
-                    setAdded(false);
-                  }}
+                  onChange={() => setSel(i.variant_id)}
                 />
                 {variantTitle(i)}
                 {i.available === 0 && <span className="ms-1 text-xs">(غير متوفر)</span>}
@@ -81,14 +83,9 @@ export default function VariantPicker({ items }: { items: V[] }) {
       </p>
 
       <div className="flex flex-wrap gap-3">
-        <button onClick={add} disabled={!canAdd} className="btn-primary btn-shine flex-1 sm:flex-none">
+        <button type="button" onClick={add} disabled={!canAdd} aria-haspopup="dialog" aria-controls="cart-drawer" className="btn-primary btn-shine flex-1">
           {v.available === 0 ? "غير متوفر" : canAdd ? "أضف للسلة" : "وصلت للحد الأقصى"}
         </button>
-        {added && (
-          <Link href="/cart" className="btn-ghost rise">
-            عرض السلة ←
-          </Link>
-        )}
       </div>
       <p className="text-xs text-muted">الحجز لمدة 24 ساعة. يؤكد المحل الطلب معك قبل التسليم، ولا يتم الدفع أونلاين.</p>
     </div>

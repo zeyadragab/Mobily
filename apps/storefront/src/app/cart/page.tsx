@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { cart, CART_MAX_QTY, useCart } from "@/lib/cart";
+import { cart, useCart } from "@/lib/cart";
 import { egp } from "@/lib/catalog";
+import CartQuantity from "@/components/CartQuantity";
 
 export default function CartPage() {
   const { lines, total } = useCart();
@@ -36,26 +37,7 @@ export default function CartPage() {
                 <p className="text-sm text-muted">{l.variant}</p>
                 <p className="mt-1 text-sm">{egp(l.price)}</p>
               </div>
-              <div className="flex items-center gap-1 rounded-full border border-line bg-bg p-1" role="group" aria-label="الكمية">
-                <button
-                  aria-label="تقليل"
-                  className="h-9 w-9 rounded-full text-lg transition hover:bg-surface"
-                  onClick={() => cart.setQty(l.variant_id, l.qty - 1)}
-                >
-                  −
-                </button>
-                <span className="w-8 text-center font-bold" aria-live="polite">
-                  {l.qty}
-                </span>
-                <button
-                  aria-label="زيادة"
-                  disabled={l.qty >= CART_MAX_QTY}
-                  className="h-9 w-9 rounded-full text-lg transition hover:bg-surface disabled:opacity-40"
-                  onClick={() => cart.setQty(l.variant_id, l.qty + 1)}
-                >
-                  +
-                </button>
-              </div>
+              <CartQuantity line={l} />
               <p className="w-28 text-end text-lg font-extrabold">{egp(l.price * l.qty)}</p>
               <button className="rounded-full px-3 py-1 text-sm text-danger transition hover:bg-danger/10" onClick={() => cart.setQty(l.variant_id, 0)}>
                 حذف
@@ -65,7 +47,7 @@ export default function CartPage() {
         </ul>
       </section>
 
-      <aside className="card h-fit space-y-4 p-6 lg:sticky lg:top-24">
+      <aside className="card h-fit space-y-4 p-6 lg:sticky lg:top-36">
         <h2 className="text-lg font-extrabold">ملخص الطلب</h2>
         <div className="flex items-end justify-between border-t border-line pt-4">
           <span className="text-muted">الإجمالي</span>

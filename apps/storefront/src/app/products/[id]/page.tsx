@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { egp, fetchItems, fetchProduct, groupProducts, safe } from "@/lib/catalog";
-import { ProductRow, Thumb } from "@/components/ProductGrid";
+import { ProductRow } from "@/components/ProductGrid";
+import ProductMedia from "@/components/ProductMedia";
 import VariantPicker from "@/components/VariantPicker";
+import { PHONE_PLACEHOLDER, PRODUCT_IMAGES } from "@/lib/site-images";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -34,6 +36,11 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   }
   if (items.length === 0) notFound();
   const p = items[0];
+  const allImages = [...new Set(items.map((item) => item.image_url).filter((src): src is string => Boolean(src)))];
+  const productImages = allImages.length > 1 ? allImages.filter((src) => src !== PHONE_PLACEHOLDER) : allImages;
+  const images = productImages.map(
+    (src) => ({ src, illustrative: src === PRODUCT_IMAGES[p.product_id] || src.startsWith("/demo/") }),
+  );
 
   const related = p.category_id
     ? groupProducts((await safe(fetchItems({ category: p.category_id }), [])).data)
@@ -55,21 +62,21 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         )}
       </nav>
 
-      <article className="grid gap-8 md:grid-cols-2 md:gap-12">
-        <div className="card group p-4 md:sticky md:top-24 md:self-start">
-          <Thumb name={p.name} src={p.image_url} className="rounded-3xl" />
+      <article className="grid min-w-0 gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] md:gap-10 lg:gap-14">
+        <div className="md:sticky md:top-36 md:self-start">
+          <ProductMedia name={p.name} images={images} />
         </div>
         <div className="space-y-6">
-          <div className="space-y-2">
-            {p.brand && <p className="text-sm font-semibold text-accent">{p.brand}</p>}
-            <h1 className="text-3xl font-extrabold leading-tight sm:text-4xl" dir="auto">
+          <div className="rise space-y-2">
+            <p className="shop-kicker">{[p.category, p.brand].filter(Boolean).join(" · ") || "تفاصيل المنتج"}</p>
+            <h1 className="text-3xl font-extrabold leading-tight sm:text-4xl lg:text-5xl" dir="auto">
               {p.name}
             </h1>
           </div>
           <VariantPicker
             items={items.map((i) => ({
               variant_id: i.variant_id, product_id: i.product_id, name: i.name, color: i.color,
-              storage: i.storage, condition: i.condition, price: Number(i.price), available: i.available,
+              storage: i.storage, condition: i.condition, price: Number(i.price), available: i.available, image_url: i.image_url,
             }))}
           />
           <ul className="grid gap-2 sm:grid-cols-3">

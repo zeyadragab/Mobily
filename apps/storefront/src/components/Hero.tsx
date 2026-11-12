@@ -1,66 +1,148 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import Parallax from "./motion/Parallax";
-import { SITE_IMAGES } from "@/lib/site-images";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import { PROMO_BANNERS, SHOWCASE_PHONES, SITE_IMAGES } from "@/lib/site-images";
 
-const CHIPS = [
-  { t: "ضمان حقيقي", cls: "end-[50%] top-[14%]", delay: 0, r: "-6deg" },
-  { t: "حجز مجاني 24 ساعة", cls: "end-[58%] top-[42%]", delay: 2, r: "5deg" },
-  { t: "استلام أو توصيل", cls: "end-[50%] bottom-[14%]", delay: 4, r: "-3deg" },
+const CAMPAIGNS = [
+  { src: SITE_IMAGES.hero, alt: "سامسونج جالاكسي زد فولد", href: "/products?q=Samsung" },
+  PROMO_BANNERS[1],
+  PROMO_BANNERS[0],
+  PROMO_BANNERS[3],
 ];
+const COUNT = CAMPAIGNS.length;
+const TRACK = [...CAMPAIGNS, ...CAMPAIGNS, ...CAMPAIGNS];
+const MOTION = "(prefers-reduced-motion: reduce)";
+const SIDE_FEATURES = [SHOWCASE_PHONES[1], SHOWCASE_PHONES[3], SHOWCASE_PHONES[5], SHOWCASE_PHONES[6]];
 
-/** First screen: full photo, headline, two clear actions. The photo drifts slowly on scroll. */
-export default function Hero() {
+function observeMedia(query: string, notify: () => void) {
+  const media = window.matchMedia(query);
+  media.addEventListener("change", notify);
+  return () => media.removeEventListener("change", notify);
+}
+
+function observeMotion(notify: () => void) {
+  return observeMedia(MOTION, notify);
+}
+
+function wrap(index: number) {
+  return ((index % COUNT) + COUNT) % COUNT;
+}
+
+function SideFeature({ phone }: { phone: (typeof SIDE_FEATURES)[number] }) {
   return (
-    <section aria-label="مرحبًا" className="relative isolate min-h-136 overflow-hidden rounded-[2rem] bg-slate-950 text-white sm:min-h-128">
-      <Parallax speed={0.08} className="absolute -inset-y-14 inset-x-0 -z-20">
-        <Image
-          src={SITE_IMAGES.hero}
-          alt="هاتف قابل للطي بلون بنفسجي"
-          fill
-          priority
-          sizes="(max-width: 1280px) 100vw, 1280px"
-          className="object-cover object-[12%_center]"
-        />
-      </Parallax>
-      {/* Keeps the text readable: dark at the text side (right), clear at the phone side (left). */}
-      <div aria-hidden="true" className="absolute inset-0 -z-10 bg-linear-to-b from-slate-950/90 via-slate-950/55 to-slate-950/20 lg:bg-linear-to-l lg:from-slate-950/85 lg:via-slate-950/45 lg:to-transparent" />
+    <Link href={`/products?q=${encodeURIComponent(phone.q ?? phone.brand)}`} className="group relative hidden min-w-0 flex-col justify-end overflow-hidden rounded-2xl border border-line bg-surface md:flex">
+      <div className="relative min-h-0 flex-1">
+        <Image src={phone.front} alt="" fill sizes="18vw" className="hero-image object-contain p-2 transition-transform duration-300 group-hover:scale-105 lg:p-4" />
+      </div>
+      <div className="bg-bg px-3 py-2 text-center lg:py-3">
+        <p className="truncate text-xs font-extrabold lg:text-sm">{phone.name}</p>
+        <span className="mt-1 inline-block text-xs font-bold text-accent group-hover:underline">تسوّق الآن ←</span>
+      </div>
+    </Link>
+  );
+}
 
-      <div className="grid min-h-inherit items-center px-5 py-10 sm:px-12 sm:py-14 lg:min-h-128 lg:grid-cols-2">
-        <div className="space-y-4 text-center sm:space-y-5 lg:text-start">
-          <p style={{ "--delay": 0 } as React.CSSProperties} className="rise mx-auto w-fit rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-xs font-medium backdrop-blur lg:mx-0 sm:text-sm">
-            ✦ أحدث الموديلات وصلت
-          </p>
-          <h1 style={{ "--delay": 1 } as React.CSSProperties} className="rise text-3xl font-extrabold leading-[1.2] sm:text-5xl lg:text-6xl">
-            موبايلك الجديد
-            <br />
-            <span className="bg-linear-to-l from-violet-200 to-white bg-clip-text text-transparent">بسعر واضح وضمان حقيقي</span>
-          </h1>
-          <p style={{ "--delay": 2 } as React.CSSProperties} className="rise mx-auto max-w-md text-base text-white/85 sm:text-lg lg:mx-0">
-            اختر جهازك، احجزه في دقيقة، واستلمه من المحل أو يوصلك لحد البيت.
-          </p>
-          <div style={{ "--delay": 3 } as React.CSSProperties} className="rise flex flex-col justify-center gap-3 sm:flex-row lg:justify-start">
-            <Link href="/products" className="btn-shine rounded-full bg-white px-8 py-3.5 text-center font-bold text-blue-800 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0">
-              تصفح المنتجات
-            </Link>
-            <Link href="/track" className="rounded-full border border-white/40 px-8 py-3.5 text-center font-semibold backdrop-blur transition hover:bg-white/10">
-              تتبع طلبي
-            </Link>
-          </div>
+export default function Hero() {
+  const [position, setPosition] = useState(COUNT);
+  const [moving, setMoving] = useState(false);
+  const [playing, setPlaying] = useState(true);
+  const region = useRef<HTMLElement>(null);
+  const touchStart = useRef<number | null>(null);
+  const reduced = useSyncExternalStore(observeMotion, () => window.matchMedia(MOTION).matches, () => false);
+  const active = wrap(position);
+
+  const move = useCallback((offset: number) => {
+    if (moving || !offset) return;
+    setMoving(!reduced);
+    setPosition((current) => reduced ? COUNT + wrap(current + offset) : current + offset);
+  }, [moving, reduced]);
+
+  useEffect(() => {
+    if (!moving) return;
+    // Also settle when the tab was hidden or the motion preference changed mid-transition.
+    const timer = window.setTimeout(() => {
+      setMoving(false);
+      setPosition((current) => COUNT + wrap(current));
+    }, reduced ? 0 : 620);
+    return () => window.clearTimeout(timer);
+  }, [moving, reduced]);
+
+  useEffect(() => {
+    if (!playing || reduced || moving) return;
+    const timer = window.setInterval(() => {
+      const carousel = region.current;
+      if (!document.hidden && carousel && !carousel.matches(":hover, :focus-within")) move(1);
+    }, 5500);
+    return () => window.clearInterval(timer);
+  }, [playing, reduced, moving, move]);
+
+  return (
+    <section ref={region} aria-label="أبرز اختيارات المتجر" className="w-full space-y-2.5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="shop-kicker">أحدث الأجهزة وعروض الماركات</p>
+          <h1 className="text-2xl font-extrabold leading-tight sm:text-3xl">موبايلك الجديد يبدأ هنا</h1>
         </div>
+        <Link href="/products" className="text-sm font-bold text-accent hover:underline">تصفح المنتجات ←</Link>
       </div>
 
-      {/* Floating badges sit over the phone side on large screens. */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 end-0 hidden w-1/2 lg:block">
-        {CHIPS.map((c) => (
-          <span
-            key={c.t}
-            style={{ "--delay": c.delay, "--r": c.r } as React.CSSProperties}
-            className={`float absolute ${c.cls} rounded-2xl border border-white/30 bg-white/15 px-3 py-2 text-sm font-semibold shadow-lg backdrop-blur`}
-          >
-            {c.t}
-          </span>
-        ))}
+      <div
+        className="hero-window"
+        onTouchStart={(event) => { touchStart.current = event.touches[0]?.clientX ?? null; }}
+        onTouchEnd={(event) => {
+          const end = event.changedTouches[0]?.clientX;
+          const start = touchStart.current;
+          touchStart.current = null;
+          if (start !== null && end !== undefined && Math.abs(end - start) > 45) move(end > start ? 1 : -1);
+        }}
+      >
+        <ul className="hero-track" data-moving={moving} style={{ "--hero-position": position } as CSSProperties}>
+          {TRACK.map((campaign, index) => {
+            const visible = index === position;
+            return (
+              <li key={index} className="hero-card grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,4fr)_minmax(0,1fr)] lg:gap-3" aria-hidden={!visible} inert={!visible}>
+                <SideFeature phone={SIDE_FEATURES[wrap(index)]} />
+                <Link href={campaign.href} className="group relative isolate flex h-full flex-col justify-end overflow-hidden rounded-3xl bg-slate-950 p-4 text-white focus-visible:outline-offset-[-4px] sm:p-7 lg:p-10">
+                  <Image
+                    src={campaign.src}
+                    alt=""
+                    fill
+                    preload={index === COUNT}
+                    loading={index === COUNT ? undefined : "lazy"}
+                    sizes="(max-width: 767px) 96vw, (max-width: 1777px) 60vw, 1060px"
+                    className="hero-image -z-20 object-contain object-top md:object-cover md:object-center"
+                  />
+                  <span aria-hidden="true" className="absolute inset-x-0 bottom-0 -z-10 h-1/2 bg-linear-to-t from-slate-950/95 to-transparent" />
+                  <span className="text-sm font-extrabold sm:text-2xl">{campaign.alt}</span>
+                  <span className="mt-1 text-xs font-medium text-white/90 sm:text-sm">تصفح المنتجات ←</span>
+                </Link>
+                <SideFeature phone={SIDE_FEATURES[wrap(index + 2)]} />
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      <div className="flex items-center justify-center gap-2">
+        <div className="flex gap-2">
+          <button type="button" aria-label="البانر السابق" onClick={() => move(-1)} className="shop-icon-button size-8">→</button>
+        </div>
+        <div className="flex gap-1" aria-label="اختيار البانر">
+          {CAMPAIGNS.map((campaign, index) => (
+            <button key={campaign.src} type="button" aria-label={campaign.alt} aria-pressed={active === index} onClick={() => {
+              const distance = wrap(index - active);
+              move(distance > COUNT / 2 ? distance - COUNT : distance);
+            }} className="group grid size-8 place-items-center rounded-full">
+              <span aria-hidden="true" className="h-2 w-2 rounded-full bg-muted/40 transition-all group-aria-pressed:w-5 group-aria-pressed:bg-accent" />
+            </button>
+          ))}
+        </div>
+        <button type="button" aria-label="البانر التالي" onClick={() => move(1)} className="shop-icon-button size-8">←</button>
+        <button type="button" aria-label={playing ? "إيقاف الحركة التلقائية" : "تشغيل الحركة التلقائية"} hidden={reduced} onClick={() => setPlaying(!playing)} className="shop-icon-button size-8">
+          <span aria-hidden="true">{playing ? "Ⅱ" : "▶"}</span>
+        </button>
       </div>
     </section>
   );

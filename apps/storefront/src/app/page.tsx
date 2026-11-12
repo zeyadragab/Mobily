@@ -2,13 +2,15 @@ import { fetchCategories, fetchItems, groupProducts, safe } from "@/lib/catalog"
 import { ProductRow } from "@/components/ProductGrid";
 import Hero from "@/components/Hero";
 import BrandMarquee from "@/components/home/BrandMarquee";
-import CategoryBento from "@/components/home/CategoryBento";
+import CategoryShortcuts from "@/components/home/CategoryBento";
 import HowItWorks from "@/components/home/HowItWorks";
 import Stats from "@/components/home/Stats";
 import FinalCta from "@/components/home/FinalCta";
 import PromoBanners from "@/components/home/PromoBanners";
-import PhonesShowcase from "@/components/home/PhonesShowcase";
 import Reveal from "@/components/motion/Reveal";
+import FeaturedCollections from "@/components/home/FeaturedCollections";
+import GamingShowcase from "@/components/home/GamingShowcase";
+import { isMobileCategory } from "@/lib/site-images";
 
 export const revalidate = 60;
 
@@ -17,17 +19,19 @@ export default async function Home() {
   const cats = c.data;
   const error = c.failed || i.failed;
   const all = groupProducts(i.data);
-  const latest = all.slice(0, 12);
-  const mobileCat = cats.find((x) => /موبايل|mobile|phone/i.test(x.name));
+  const highlights = all.filter((product) => product.inStock).slice(0, 8);
+  const mobileCat = cats.find((x) => isMobileCategory(x.name));
+  const computerCat = cats.find((x) => /لاب|laptop|كمبيوتر/i.test(x.name));
+  const mobiles = mobileCat ? all.filter((product) => product.category_id === mobileCat.id).slice(0, 10) : [];
+  const computers = computerCat ? all.filter((product) => product.category_id === computerCat.id).slice(0, 10) : [];
   const brands = [...new Set(all.map((p) => p.brand).filter((b): b is string => !!b))];
 
   return (
     <div className="space-y-12 sm:space-y-16">
-      <Hero />
-      <BrandMarquee />
-      <PromoBanners />
-      <CategoryBento cats={cats} />
-      <PhonesShowcase mobileHref={mobileCat ? `/products?category=${mobileCat.id}` : "/products"} />
+      <div className="space-y-3 sm:space-y-4">
+        <Hero />
+        <CategoryShortcuts cats={cats} />
+      </div>
 
       {error && (
         <p role="alert" className="rounded-2xl border border-line bg-surface p-6 text-center text-muted">
@@ -40,13 +44,16 @@ export default async function Home() {
         </p>
       )}
 
-      <Reveal>
-        <ProductRow title="وصل حديثًا" href="/products" products={latest} />
-      </Reveal>
+      <ProductRow title="مختارات المتجر" href="/products" products={highlights.length ? highlights : all.slice(0, 8)} />
+      <PromoBanners />
+      {mobileCat && <ProductRow title={mobileCat.name} href={`/products?category=${mobileCat.id}`} products={mobiles} />}
+      <div className="space-y-4 sm:space-y-5">
+        <FeaturedCollections categories={cats} />
+        {computerCat && <ProductRow title="تسوّق اللابتوبات" href={`/products?category=${computerCat.id}`} products={computers} />}
+      </div>
+      <GamingShowcase items={i.data} />
 
-      <HowItWorks />
-
-      {cats.slice(0, 3).map((cat) => (
+      {cats.filter((cat) => cat.id !== mobileCat?.id && cat.id !== computerCat?.id).slice(0, 2).map((cat) => (
         <Reveal key={cat.id}>
           <ProductRow
             title={cat.name}
@@ -55,6 +62,9 @@ export default async function Home() {
           />
         </Reveal>
       ))}
+
+      <HowItWorks />
+      <BrandMarquee />
 
       <Stats
         stats={[

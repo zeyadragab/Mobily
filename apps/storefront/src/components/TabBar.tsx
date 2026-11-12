@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCart } from "@/lib/cart";
+import { useOpenCart } from "./CartDrawer";
 import { Ico } from "./Header";
 
 const ICONS = {
@@ -17,7 +18,8 @@ const ICONS = {
 export default function TabBar() {
   const path = usePathname();
   const { count } = useCart();
-  const item = (href: string, label: string, icon: keyof typeof ICONS, badge = 0) => {
+  const openCart = useOpenCart();
+  const item = (href: string, label: string, icon: keyof typeof ICONS) => {
     const active = href === "/" ? path === "/" : path.startsWith(href);
     return (
       <Link
@@ -27,11 +29,6 @@ export default function TabBar() {
       >
         <Ico d={ICONS[icon]} className="h-6 w-6" />
         {label}
-        {badge > 0 && (
-          <span className="absolute end-1/4 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-white">
-            {badge}
-          </span>
-        )}
       </Link>
     );
   };
@@ -48,7 +45,22 @@ export default function TabBar() {
           جديدنا
         </Link>
         {item("/track", "طلباتي", "track")}
-        {item("/cart", "السلة", "cart", count)}
+        <button
+          type="button"
+          aria-label={`السلة، ${count} عنصر`}
+          aria-haspopup="dialog"
+          aria-controls="cart-drawer"
+          className="relative flex flex-1 flex-col items-center gap-0.5 py-2 text-xs text-muted"
+          onClick={() => openCart()}
+        >
+          <Ico d={ICONS.cart} />
+          السلة
+          {count > 0 && (
+            <span className="absolute end-1/4 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-fg">
+              {count}
+            </span>
+          )}
+        </button>
       </div>
     </nav>
   );

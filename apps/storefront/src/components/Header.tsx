@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { useCart } from "@/lib/cart";
+import { useOpenCart } from "./CartDrawer";
 
 const NAME = process.env.NEXT_PUBLIC_STORE_NAME || "متجر الموبايلات";
 
@@ -23,6 +24,7 @@ export function Ico({ d, className = "h-6 w-6" }: { d: string; className?: strin
 
 export default function Header({ categories }: { categories: { id: string; name: string }[] }) {
   const { count } = useCart();
+  const openCart = useOpenCart();
   const router = useRouter();
   const [q, setQ] = useState("");
   const [drawer, setDrawer] = useState(false);
@@ -61,7 +63,7 @@ export default function Header({ categories }: { categories: { id: string; name:
 
   return (
     <header className={`sticky top-0 z-30 border-b border-line bg-surface/90 backdrop-blur-md transition-shadow duration-300 ${scrolled ? "shadow-(--shadow-card)" : ""}`}>
-      <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-3">
+      <div className="shop-shell flex items-center gap-2 py-3 md:grid md:grid-cols-[minmax(13.5rem,1fr)_minmax(0,2fr)_minmax(13.5rem,1fr)] md:gap-3">
         <button
           aria-label="القائمة"
           aria-expanded={drawer}
@@ -79,28 +81,57 @@ export default function Header({ categories }: { categories: { id: string; name:
           <Ico d={I.search} />
         </button>
 
-        <Link href="/" className="mx-auto text-xl font-extrabold tracking-tight text-accent md:mx-0">
+        <Link href="/" className="mx-auto min-w-0 truncate text-xl font-extrabold tracking-tight text-accent md:mx-0 md:justify-self-start">
           {NAME}
         </Link>
 
-        <form onSubmit={search} role="search" className="mx-6 hidden max-w-xl flex-1 md:block">
+        <form onSubmit={search} role="search" className="hidden w-full max-w-2xl min-w-0 justify-self-center md:block">
           {searchBox}
         </form>
 
-        <nav className="hidden items-center gap-1 text-sm font-medium md:flex" aria-label="التنقل الرئيسي">
-          <Link href="/products" className="rounded-full px-4 py-2 hover:bg-bg">المنتجات</Link>
-          <Link href="/track" className="rounded-full px-4 py-2 hover:bg-bg">تتبع طلبي</Link>
-        </nav>
+        <div className="flex shrink-0 items-center gap-2 md:justify-self-end">
+          <nav className="hidden items-center gap-1 text-sm font-medium whitespace-nowrap md:flex" aria-label="التنقل الرئيسي">
+            <Link href="/products" className="rounded-full px-3 py-2 hover:bg-bg lg:px-4">المنتجات</Link>
+            <Link href="/track" className="rounded-full px-3 py-2 hover:bg-bg lg:px-4">تتبع طلبي</Link>
+          </nav>
 
-        <Link href="/cart" className="relative rounded-full p-2 hover:bg-bg" aria-label={`السلة، ${count} عنصر`}>
-          <Ico d={I.cart} />
-          {count > 0 && (
-            <span className="absolute -top-0.5 -end-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-xs font-bold text-white">
-              {count}
-            </span>
-          )}
-        </Link>
+          <button
+            type="button"
+            className="shop-icon-button relative"
+            aria-label={`السلة، ${count} عنصر`}
+            aria-haspopup="dialog"
+            aria-controls="cart-drawer"
+            onClick={() => openCart()}
+          >
+            <Ico d={I.cart} />
+            {count > 0 && (
+              <span key={count} className="shop-feedback absolute -top-1 -end-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-xs font-bold text-accent-fg">
+                {count}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
+
+      {categories.length > 0 && (
+        <nav aria-label="أقسام المتجر" className="hidden border-t border-line md:block">
+          <ul className="shop-shell shop-rail flex items-center gap-1 overflow-x-auto px-1 py-1.5">
+            <li className="shrink-0">
+              <Link href="/products" className="flex items-center gap-2 rounded-full bg-bg px-4 py-2 text-sm font-bold text-accent hover:underline">
+                <Ico d={I.menu} className="size-4" />
+                كل الأقسام
+              </Link>
+            </li>
+            {categories.map((category) => (
+              <li key={category.id} className="shrink-0">
+                <Link href={`/products?category=${category.id}`} className="block rounded-full px-4 py-2 text-sm font-semibold hover:bg-bg hover:text-accent">
+                  {category.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
 
       {searchOpen && (
         <form onSubmit={search} role="search" className="px-4 pb-3 md:hidden">

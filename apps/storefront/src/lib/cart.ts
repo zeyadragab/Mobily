@@ -9,6 +9,8 @@ export type CartLine = {
   variant: string;
   price: number;
   qty: number;
+  image_url?: string | null;
+  available?: number;
 };
 
 const KEY = "cart.v1";
@@ -59,15 +61,23 @@ export const cart = {
   add(line: Omit<CartLine, "qty">, qty = 1) {
     const cur = read();
     const ex = cur.find((l) => l.variant_id === line.variant_id);
+    const limit = Math.min(MAX_QTY, line.available ?? MAX_QTY);
+    const nextQty = Math.min(limit, (ex?.qty ?? 0) + qty);
+    if (nextQty <= (ex?.qty ?? 0)) return;
     write(
       ex
-        ? cur.map((l) => (l.variant_id === line.variant_id ? { ...l, qty: Math.min(MAX_QTY, l.qty + qty) } : l))
-        : [...cur, { ...line, qty: Math.min(MAX_QTY, qty) }],
+        ? cur.map((l) => (l.variant_id === line.variant_id ? { ...l, ...line, qty: nextQty } : l))
+        : [...cur, { ...line, qty: nextQty }],
     );
   },
   setQty(variantId: string, qty: number) {
     const q = Math.max(0, Math.min(MAX_QTY, qty));
-    write(read().flatMap((l) => (l.variant_id !== variantId ? [l] : q === 0 ? [] : [{ ...l, qty: q }])));
+    write(read().flatMap((l) => {
+      if (l.variant_id !== variantId) return [l];
+      if (q === 0) return [];
+      const available = l.available ?? MAX_QTY;
+      return [{ ...l, qty: Math.min(q, Math.max(l.qty, available)) }];
+    }));
   },
   clear() {
     write([]);

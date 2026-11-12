@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import { PRODUCT_IMAGES } from "./site-images";
+import { isMobileCategory, PHONE_PLACEHOLDER, PRODUCT_IMAGES } from "./site-images";
 
 export type Item = {
   variant_id: string;
@@ -39,7 +39,7 @@ export async function fetchItems(opts: { category?: string; q?: string } = {}): 
   if (opts.category) query = query.eq("category_id", opts.category);
   if (opts.q) {
     const s = opts.q.replace(/[%,()]/g, " ").trim();
-    if (s) query = query.or(`name.ilike.%${s}%,brand.ilike.%${s}%`);
+    if (s) query = query.or(`name.ilike.%${s}%,brand.ilike.%${s}%,storage.ilike.%${s}%`);
   }
   const { data, error } = await query.limit(500);
   if (error) throw new Error(error.message);
@@ -78,6 +78,7 @@ export function groupProducts(items: Item[]): ProductCard[] {
       c.minPrice = Math.min(c.minPrice, price);
       c.maxPrice = Math.max(c.maxPrice, price);
       c.inStock = c.inStock || i.available > 0;
+      if (c.image_url === PHONE_PLACEHOLDER && i.image_url && i.image_url !== PHONE_PLACEHOLDER) c.image_url = i.image_url;
     }
   }
   return [...m.values()];
@@ -103,8 +104,8 @@ export function variantTitle(i: Pick<Item, "storage" | "color" | "condition">) {
 /** Fills missing/placeholder product images from the local photo map. */
 function withLocalImages(items: Item[]): Item[] {
   return items.map((i) => {
-    const local = PRODUCT_IMAGES[i.product_id];
     const missing = !i.image_url || i.image_url.startsWith("/demo/");
+    const local = isMobileCategory(i.category) ? PHONE_PLACEHOLDER : PRODUCT_IMAGES[i.product_id];
     return local && missing ? { ...i, image_url: local } : i;
   });
 }

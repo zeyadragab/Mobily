@@ -1,58 +1,49 @@
 import Image from "next/image";
 import Link from "next/link";
 import { categoryImage } from "@/lib/site-images";
-import Reveal from "../motion/Reveal";
 
-const TONES = [
-  "from-blue-700 to-sky-500",
-  "from-slate-800 to-blue-600",
-  "from-indigo-700 to-blue-500",
-  "from-sky-600 to-cyan-400",
-  "from-blue-900 to-indigo-600",
-];
+const GRID = "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z";
+const OFFERS = "M3 12V4h8l10 10-7 7zM7.5 8h.01";
+const GAMEPAD = "M7 8h10c2 0 3 1 4 4l1 4c.4 2-2 3-3 2l-3-3H8l-3 3c-1 1-3.4 0-3-2l1-4c1-3 2-4 4-4zM8 10v4m-2-2h4m7-1h.01m2 2h.01";
+const HEADPHONES = "M3 15v-3a9 9 0 0 1 18 0v3M3 14h4v6H5a2 2 0 0 1-2-2zm18 0h-4v6h2a2 2 0 0 0 2-2z";
+const CHARGER = "m13 2-9 12h7l-1 8 9-12h-7z";
 
-/** Bento grid: the first category is the big tile. Images can replace the big letter later. */
-export default function CategoryBento({ cats }: { cats: { id: string; name: string }[] }) {
-  if (cats.length === 0) return null;
-  const list = cats.slice(0, 5);
+function shortcutArtwork(name: string) {
+  if (/موبايل|هاتف|mobile|phone/i.test(name)) return { image: "/img/imgi_3_mobile.jpg", path: GRID };
+  if (/تابلت|ايباد|آيباد|tablet|ipad/i.test(name)) return { image: "/img/imgi_4_tablets.jpg", path: GRID };
+  if (/شواحن|شاحن|charger/i.test(name)) return { image: null, path: CHARGER };
+  if (/إكسسوار|اكسسوار|accessor/i.test(name)) return { image: null, path: HEADPHONES };
+  return { image: categoryImage(name), path: GRID };
+}
+
+export default function CategoryShortcuts({ cats }: { cats: { id: string; name: string }[] }) {
+  const shortcuts = [
+    { name: "العروض", href: "#store-offers", image: null, path: OFFERS },
+    ...cats.map(({ id, name }) => ({ name, href: `/products?category=${id}`, ...shortcutArtwork(name) })),
+    { name: "الجيمنج", href: "#gaming", image: null, path: GAMEPAD },
+    { name: "كل الأقسام", href: "/products", image: null, path: GRID },
+  ];
+
   return (
-    <section aria-label="الأقسام" className="space-y-4">
-      <Reveal>
-        <h2 className="text-2xl font-extrabold sm:text-3xl">تسوّق حسب القسم</h2>
-      </Reveal>
-      <ul className="grid auto-rows-[9rem] grid-cols-2 gap-3 sm:auto-rows-[11rem] md:grid-cols-4 lg:gap-4">
-        {list.map((c, i) => (
-          <li key={c.id} className={i === 0 ? "col-span-2 row-span-2" : ""}>
-            <Reveal delay={i} scale={0.96} className="h-full">
-              <Link
-                href={`/products?category=${c.id}`}
-                className={`group relative flex h-full flex-col justify-end overflow-hidden rounded-3xl bg-linear-to-br ${TONES[i % TONES.length]} p-5 text-white shadow-(--shadow-card)`}
-              >
-                {categoryImage(c.name) ? (
-                  <>
-                    <Image
-                      src={categoryImage(c.name)!}
-                      alt=""
-                      fill
-                      sizes={i === 0 ? "(max-width: 768px) 100vw, 50vw" : "(max-width: 768px) 50vw, 25vw"}
-                      className="object-cover object-[10%_center] transition-transform duration-700 ease-out group-hover:scale-110"
-                    />
-                    <span aria-hidden="true" className="absolute inset-0 bg-linear-to-t from-slate-950/85 via-slate-950/25 to-transparent" />
-                  </>
+    <nav id="category-shortcuts" aria-label="اختصارات أقسام المتجر" className="border-b border-line pb-3">
+      <ul className="shop-rail flex snap-x gap-3 overflow-x-auto p-1 sm:gap-6 lg:justify-center-safe">
+        {shortcuts.map(({ name, href, image, path }) => (
+          <li key={href} className="w-[4.8rem] shrink-0 snap-start sm:w-24">
+            <Link href={href} className="group flex flex-col items-center gap-1.5 rounded-2xl py-2 text-center text-xs font-bold transition-colors hover:text-accent sm:text-sm">
+              <span className="relative grid size-12 place-items-center overflow-hidden rounded-full border border-line bg-surface text-accent transition duration-300 group-hover:-translate-y-1 group-hover:border-accent group-hover:shadow-(--shadow-card) sm:size-16">
+                {image ? (
+                  <Image src={image} alt="" fill sizes="64px" className="object-cover" />
                 ) : (
-                  <span aria-hidden="true" className="absolute -top-4 -end-2 text-[9rem] font-black leading-none text-white/15 transition-transform duration-700 ease-out group-hover:scale-110 group-hover:-rotate-6">
-                    {c.name.trim().charAt(0)}
-                  </span>
+                  <svg viewBox="0 0 24 24" className="size-5 sm:size-7" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                    <path d={path} />
+                  </svg>
                 )}
-                <span className={`relative font-extrabold ${i === 0 ? "text-3xl sm:text-4xl" : "text-lg sm:text-xl"}`}>{c.name}</span>
-                <span className="relative mt-1 flex items-center gap-1 text-sm text-white/80 transition-all group-hover:gap-3">
-                  تصفح القسم <span aria-hidden="true">←</span>
-                </span>
-              </Link>
-            </Reveal>
+              </span>
+              <span>{name}</span>
+            </Link>
           </li>
         ))}
       </ul>
-    </section>
+    </nav>
   );
 }

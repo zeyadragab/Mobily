@@ -1,46 +1,44 @@
 import Image from "next/image";
 import Link from "next/link";
-import { SITE_IMAGES } from "@/lib/site-images";
 import Reveal from "../motion/Reveal";
-import Parallax from "../motion/Parallax";
 
-/** Closing banner: text and buttons on one side, a big phone photo on the other. */
+/** Closing banner: copy on the start side, a large phone photo fading in from the end side. */
 export default function FinalCta() {
   return (
     <Reveal scale={0.97}>
       <section
+        id="choose-device"
         aria-label="ابدأ الآن"
-        className="card relative isolate grid overflow-hidden rounded-[2rem] lg:min-h-96 lg:grid-cols-5"
+        className="card relative isolate overflow-hidden rounded-3xl bg-linear-to-br from-white via-white to-blue-50 text-slate-950 md:min-h-80"
       >
-        <div aria-hidden="true" className="blob absolute -start-24 -top-24 -z-10 h-72 w-72 rounded-full bg-blue-300/30 blur-3xl" />
-        <div aria-hidden="true" className="blob absolute -bottom-24 start-1/3 -z-10 h-72 w-72 rounded-full bg-orange-300/30 blur-3xl [animation-delay:-6s]" />
+        <div aria-hidden="true" className="pointer-events-none absolute -end-24 top-1/2 -z-10 size-[28rem] -translate-y-1/2 rounded-full bg-orange-200/40 blur-3xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute -start-24 -top-24 -z-10 size-72 rounded-full bg-blue-200/50 blur-3xl" />
 
-        <div className="flex flex-col justify-center gap-4 p-7 text-center sm:p-12 lg:col-span-2 lg:text-start">
-          <p className="mx-auto w-fit rounded-full bg-accent/10 px-4 py-1.5 text-sm font-semibold text-accent lg:mx-0">متوفر الآن</p>
+        {/* Photo: white background is multiplied away and the inner edge is faded, so no box shows. */}
+        <div className="relative h-48 sm:h-60 md:absolute md:inset-y-0 md:left-0 md:h-auto md:w-[58%]">
+          <Image
+            src="/img/closing-phone.png"
+            alt="يد تحمل هاتفًا بلون نحاسي"
+            fill
+            sizes="(min-width: 768px) 58vw, 100vw"
+            className="object-cover mix-blend-multiply [mask-image:linear-gradient(to_bottom,#000_70%,transparent)] md:[mask-image:linear-gradient(to_left,transparent,#000_35%)]"
+          />
+        </div>
+
+        <div className="relative space-y-3 px-6 pb-8 text-center md:w-[46%] md:px-10 md:py-14 md:text-start">
+          <p className="inline-block rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-800 sm:text-sm">
+            حجز مجاني لمدة 24 ساعة
+          </p>
           <h2 className="text-3xl font-extrabold leading-tight sm:text-4xl">جاهز تختار جهازك الجديد؟</h2>
-          <p className="text-muted">احجز الآن مجانًا، ونحن نحجز لك القطعة 24 ساعة.</p>
-          <div className="flex flex-col justify-center gap-3 pt-2 sm:flex-row lg:justify-start">
-            <Link href="/products" className="btn-primary btn-shine">
+          <p className="text-sm text-slate-600 sm:text-base">اختار جهازك وشوف السعر والتوافر قبل ما تحجز.</p>
+          <div className="flex flex-wrap justify-center gap-3 pt-2 md:justify-start">
+            <Link href="/products" className="btn-primary btn-shine px-6 py-3 text-sm sm:text-base">
               تصفح المنتجات
             </Link>
-            <Link href="/track" className="btn-ghost">
+            <Link href="/track" className="btn-ghost bg-white px-6 py-3 text-sm text-slate-950 sm:text-base">
               تتبع طلبي
             </Link>
           </div>
-        </div>
-
-        <div className="relative order-first aspect-[2000/894] overflow-hidden lg:order-none lg:col-span-3 lg:aspect-auto">
-          <Parallax speed={-0.05} className="absolute inset-0 lg:-inset-y-8">
-            <Image
-              src={SITE_IMAGES.cta}
-              alt="فيفو V80 بلون برتقالي"
-              fill
-              sizes="(max-width: 1024px) 100vw, 60vw"
-              className="object-cover lg:origin-right lg:scale-[1.07] lg:object-right"
-            />
-          </Parallax>
-          {/* Soft fade into the text side so the white photo background blends with the card. */}
-          <div aria-hidden="true" className="absolute inset-y-0 start-0 hidden w-24 bg-linear-to-l from-surface to-transparent lg:block" />
         </div>
       </section>
     </Reveal>
