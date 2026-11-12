@@ -12,6 +12,8 @@ const Products = lazy(() => import('./pages/Products'))
 const Inventory = lazy(() => import('./pages/Inventory'))
 const SupplierAccounts = lazy(() => import('./pages/SupplierAccounts'))
 const Devices = lazy(() => import('./pages/Devices'))
+const Repairs = lazy(() => import('./pages/Repairs'))
+const Maintenance = lazy(() => import('./pages/Maintenance'))
 const Sales = lazy(() => import('./pages/Sales'))
 const Cash = lazy(() => import('./pages/Cash'))
 const Expenses = lazy(() => import('./pages/Expenses'))
@@ -21,10 +23,15 @@ const Suppliers = lazy(() => import('./pages/Suppliers'))
 const PurchaseOrders = lazy(() => import('./pages/PurchaseOrders'))
 const Approvals = lazy(() => import('./pages/Approvals'))
 const AuditLog = lazy(() => import('./pages/AuditLog'))
+const Customers = lazy(() => import('./pages/Customers'))
+const Accounts = lazy(() => import('./pages/Accounts'))
+const Security = lazy(() => import('./pages/Security'))
 
 const PAGES: Record<string, React.ReactNode> = {
   '/supplier-accounts': <SupplierAccounts />,
   '/devices': <Devices />,
+  '/repairs': <Repairs />,
+  '/maintenance': <Maintenance />,
   '/sales': <Sales />,
   '/cash': <Cash />,
   '/expenses': <Expenses />,
@@ -36,6 +43,9 @@ const PAGES: Record<string, React.ReactNode> = {
   '/purchase-orders': <PurchaseOrders />,
   '/approvals': <Approvals />,
   '/audit': <AuditLog />,
+  '/security': <Security />,
+  '/customers': <Customers />,
+  '/accounts': <Accounts />,
 }
 
 export default function App() {

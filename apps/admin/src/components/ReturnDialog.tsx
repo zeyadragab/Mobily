@@ -6,6 +6,7 @@ import { useSettings } from '../lib/settings'
 import { METHOD_AR, type Method } from '../lib/data'
 import { formatEGP, toMinor } from '../lib/money'
 import { Button, ErrorText, Field, inputCls, Modal } from './ui'
+import { AccountSelect } from './SourcePicker'
 
 export type ReturnableInvoice = {
   id: string
@@ -13,7 +14,7 @@ export type ReturnableInvoice = {
   subtotal: string
   total: string
   sales_invoice_lines: { id: string; name_snapshot: string; qty: number; unit_price: string; serials: string[] | null }[]
-  sales_payments: { method: Method }[]
+  sales_payments: { method: string }[]
 }
 
 type PastReturn = { id: string; status: string; sales_return_lines: { invoice_line_id: string; qty: number; serials: string[] | null }[] }
@@ -25,7 +26,8 @@ export default function ReturnDialog({ inv, onClose }: { inv: ReturnableInvoice;
   const [qty, setQty] = useState<Record<string, string>>({})
   const [picked, setPicked] = useState<Record<string, string[]>>({})
   const [reason, setReason] = useState('')
-  const [method, setMethod] = useState<Method>(inv.sales_payments[0]?.method ?? 'cash')
+  const [method, setMethod] = useState<Method>((inv.sales_payments.find((p) => p.method in METHOD_AR)?.method as Method | undefined) ?? 'cash')
+  const [account, setAccount] = useState('')
   const [err, setErr] = useState<unknown>(null)
 
   const past = useQuery({
@@ -54,8 +56,9 @@ export default function ReturnDialog({ inv, onClose }: { inv: ReturnableInvoice;
     mutationFn: async () => {
       if (chosen.length === 0) throw new Error('حدد كمية مرتجعة لصنف واحد على الأقل.')
       if (!reason.trim()) throw new Error('سبب المرتجع مطلوب.')
-      const { error } = await supabase.rpc('create_return', {
+      const { error } = await supabase.rpc('create_return_from', {
         p_invoice: inv.id,
+        p_account: method !== 'cash' && account ? account : null,
         p_lines: chosen.map((x) => (x.l.serials ? { invoice_line_id: x.l.id, serials: picked[x.l.id] } : { invoice_line_id: x.l.id, qty: x.q })),
         p_reason: reason.trim(),
         p_method: method,
@@ -63,7 +66,7 @@ export default function ReturnDialog({ inv, onClose }: { inv: ReturnableInvoice;
       if (error) throw error
     },
     onSuccess: () => {
-      ;['sales', 'returns-of', 'approvals', 'cash', 'transactions', 'inspection', 'devices'].forEach((k) => qc.invalidateQueries({ queryKey: [k] }))
+      ;['sales', 'returns-of', 'approvals', 'cash', 'transactions', 'inspection', 'devices', 'accounts', 'drawers'].forEach((k) => qc.invalidateQueries({ queryKey: [k] }))
       onClose()
     },
     onError: setErr,
@@ -118,6 +121,11 @@ export default function ReturnDialog({ inv, onClose }: { inv: ReturnableInvoice;
               {Object.entries(METHOD_AR).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
             </select>
           </Field>
+          {method !== 'cash' && (
+            <Field label="يخرج من حساب" hint="اتركه فارغًا لتسجيل الرد فقط">
+              <AccountSelect value={account} onChange={setAccount} />
+            </Field>
+          )}
         </div>
         <div className="rounded-xl bg-bg p-4 text-sm">
           <p className="flex justify-between text-base font-bold"><span>المبلغ المسترد</span><span>{formatEGP(refund)}</span></p>

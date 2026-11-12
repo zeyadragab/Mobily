@@ -8,6 +8,7 @@ import { formatEGP, fromMinor, toMinor } from '../lib/money'
 import { cairoBusinessDate, formatCairo } from '../lib/time'
 import { Button, Card, Chip, ErrorText, Field, inputCls, Modal, PageHeader } from '../components/ui'
 import { State } from '../components/State'
+import SourcePicker from '../components/SourcePicker'
 import { useSettings } from '../lib/settings'
 
 type Bal = { supplier_id: string; name: string; status: string; invoiced: number | string; paid: number | string; balance: number | string; overdue: number | string }
@@ -227,7 +228,7 @@ function NewPayment({ sup, invoices, onClose }: { sup: Bal; invoices: Inv[]; onC
   const settings = useSettings()
   const session = useOpenSession()
   const { hasRole } = useAuth()
-  const [f, setF] = useState({ invoice: '', amount: '', method: 'transfer' as Method, note: '' })
+  const [f, setF] = useState({ invoice: '', amount: '', method: 'transfer' as Method, note: '', drawer: '', account: '' })
   const [err, setErr] = useState<unknown>(null)
   const inv = invoices.find((i) => i.id === f.invoice)
   let amt = 0
@@ -238,8 +239,9 @@ function NewPayment({ sup, invoices, onClose }: { sup: Bal; invoices: Inv[]; onC
   const save = useMutation({
     mutationFn: async () => {
       if (amt <= 0) throw new Error('أدخل مبلغًا صحيحًا.')
-      const { error } = await supabase.rpc('pay_supplier', {
+      const { error } = await supabase.rpc('pay_supplier_from', {
         p_supplier: sup.supplier_id, p_invoice: f.invoice || null, p_amount: Number(fromMinor(amt)), p_method: f.method, p_note: f.note || null,
+        p_drawer: f.method === 'cash' ? f.drawer || null : null, p_account: f.method !== 'cash' ? f.account || null : null,
       })
       if (error) throw error
     },
@@ -267,6 +269,7 @@ function NewPayment({ sup, invoices, onClose }: { sup: Bal; invoices: Inv[]; onC
           </Field>
           <Field label="ملاحظة" className="sm:col-span-2"><input className={inputCls} dir="auto" value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></Field>
         </div>
+        <SourcePicker method={f.method} drawer={f.drawer} account={f.account} onDrawer={(d) => setF({ ...f, drawer: d })} onAccount={(a) => setF({ ...f, account: a })} />
         {f.method === 'cash' && !session.isLoading && !session.data && <p role="alert" className="text-sm text-warn">الدرج مغلق. افتحه من <Link to="/cash" className="underline">صفحة الدرج</Link> أو اختر طريقة أخرى.</p>}
         {needsApproval && <p role="status" className="rounded-lg border border-warn/40 bg-warn/10 px-3 py-2 text-sm text-warn">الدفعات من {formatEGP(thr)} فأكثر تحتاج موافقة المالك. لن تُحتسب ولن يخرج المبلغ من الدرج قبل موافقته.</p>}
       </div>

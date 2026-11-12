@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
-import { METHOD_AR, useOpenSession, useProducts, useStock, variantLabel, type Method } from '../lib/data'
+import { SALE_METHOD_AR, useOpenSession, useProducts, useStock, variantLabel, type SaleMethod } from '../lib/data'
+import { matchCustomer, useCustomers } from '../lib/customers'
+import { CustomerForm } from './Customers'
 import { formatEGP, fromMinor, toMinor } from '../lib/money'
 import { cairoBusinessDate, formatCairo } from '../lib/time'
 import { Button, Card, Chip, ErrorText, Field, inputCls, Modal, PageHeader } from '../components/ui'
@@ -11,6 +13,7 @@ import { State } from '../components/State'
 import { useSettings } from '../lib/settings'
 import ReturnDialog from '../components/ReturnDialog'
 import SerialPicker from '../components/SerialPicker'
+import { AccountSelect } from '../components/SourcePicker'
 
 type Invoice = {
   id: string
@@ -26,7 +29,7 @@ type Invoice = {
   created_at: string
   created_by: string
   sales_invoice_lines: { id: string; name_snapshot: string; qty: number; unit_price: string; serials: string[] | null }[]
-  sales_payments: { id: string; method: Method; amount: string }[]
+  sales_payments: { id: string; method: SaleMethod; amount: string }[]
 }
 const STATUS = {
   completed: { label: 'مكتملة', tone: 'ok' },
@@ -36,7 +39,8 @@ const STATUS = {
 
 type Line = { variant_id: string; qty: number; serials?: string[] }
 const lq = (l: Line) => (l.serials ? l.serials.length : l.qty)
-type Pay = { method: Method; amount: string }
+type Pay = { method: SaleMethod; amount: string; account?: string }
+type Held = { id: string; label: string | null; customer_name: string | null; customer_phone: string | null; discount: number | string; notes: string | null; lines: Line[]; created_at: string }
 
 export default function Sales() {
   const { hasRole } = useAuth()
@@ -46,6 +50,22 @@ export default function Sales() {
   const [creating, setCreating] = useState(false)
   const [viewId, setViewId] = useState<string | null>(null)
   const [returning, setReturning] = useState(false)
+  const [heldOpen, setHeldOpen] = useState(false)
+  const [resume, setResume] = useState<Held | null>(null)
+  const qc = useQueryClient()
+  const held = useQuery({
+    queryKey: ['sales', 'held'],
+    enabled: canSell,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('held_baskets').select('id,label,customer_name,customer_phone,discount,notes,lines,created_at').order('created_at', { ascending: false })
+      if (error) throw error
+      return data as Held[]
+    },
+  })
+  const discard = useMutation({
+    mutationFn: async (id: string) => { const { error } = await supabase.rpc('discard_basket', { p_id: id }); if (error) throw error },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['sales', 'held'] }),
+  })
 
   const q = useQuery({
     queryKey: ['sales', day],
@@ -77,10 +97,13 @@ export default function Sales() {
       <PageHeader
         title="المبيعات"
         subtitle="سجّل كل عملية بيع هنا. تُخصم الكمية من المخزون وتُسجَّل الدفعات تلقائيًا."
-        actions={canSell && <Button variant="primary" onClick={() => setCreating(true)}>+ فاتورة جديدة</Button>}
+        actions={canSell && <>
+          <Button onClick={() => setHeldOpen(true)}>فواتير معلّقة{held.data?.length ? ` (${held.data.length})` : ''}</Button>
+          <Button variant="primary" onClick={() => { setResume(null); setCreating(true) }}>+ فاتورة جديدة</Button>
+        </>}
       />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+      <div className="stagger mb-4 grid gap-3 sm:grid-cols-3">
         <Card className="p-4"><p className="text-xs text-muted">مبيعات اليوم المحدد</p><p className="mt-1 text-2xl font-bold">{formatEGP(dayTotal)}</p></Card>
         <Card className="p-4"><p className="text-xs text-muted">عدد الفواتير المكتملة</p><p className="mt-1 text-2xl font-bold">{done.length}</p></Card>
         <Card className="p-4"><p className="text-xs text-muted">بانتظار موافقة</p><p className="mt-1 text-2xl font-bold">{rows.filter((r) => r.status === 'pending_approval').length}</p></Card>
@@ -110,7 +133,7 @@ export default function Sales() {
                   <td className="p-3">{i.sales_invoice_lines.reduce((s, l) => s + l.qty, 0)}</td>
                   <td className="p-3">{toMinor(i.discount) ? formatEGP(toMinor(i.discount)) : '—'}</td>
                   <td className="whitespace-nowrap p-3 font-semibold">{formatEGP(toMinor(i.total))}</td>
-                  <td className="p-3 text-xs">{[...new Set(i.sales_payments.map((p) => METHOD_AR[p.method]))].join('، ') || '—'}</td>
+                  <td className="p-3 text-xs">{[...new Set(i.sales_payments.map((p) => SALE_METHOD_AR[p.method]))].join('، ') || '—'}</td>
                   <td className="p-3"><Chip tone={STATUS[i.status].tone}>{STATUS[i.status].label}</Chip></td>
                   <td className="whitespace-nowrap p-3">{formatCairo(i.created_at)}</td>
                 </tr>
@@ -120,12 +143,33 @@ export default function Sales() {
         </Card>
       )}
 
-      {creating && <NewInvoice onClose={() => setCreating(false)} />}
+      {creating && <NewInvoice initial={resume} onClose={() => { setCreating(false); setResume(null) }} />}
+
+      <Modal open={heldOpen} onClose={() => setHeldOpen(false)} title="الفواتير المعلّقة" footer={<Button onClick={() => setHeldOpen(false)}>إغلاق</Button>}>
+        <div className="space-y-2 text-sm">
+          <ErrorText error={discard.error} />
+          {held.isLoading && <State kind="loading" />}
+          {held.data?.length === 0 && <p className="py-6 text-center text-muted">لا توجد فواتير معلّقة. من شاشة الفاتورة اضغط «تعليق الفاتورة» لحفظها مؤقتًا وخدمة عميل آخر.</p>}
+          {held.data?.map((h) => (
+            <div key={h.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-line p-3">
+              <div className="min-w-0 flex-1">
+                <p className="font-medium" dir="auto">{h.label || h.customer_name || 'فاتورة بدون اسم'}</p>
+                <p className="text-xs text-muted">{h.lines.length} صنف · {formatCairo(h.created_at)}</p>
+              </div>
+              <Button small variant="primary" onClick={() => { setResume(h); setHeldOpen(false); setCreating(true) }}>استكمال</Button>
+              <Button small variant="danger" disabled={discard.isPending} onClick={() => discard.mutate(h.id)}>حذف</Button>
+            </div>
+          ))}
+          <p className="text-xs text-muted">التعليق لا يحجز المخزون: الكميات تُراجع من جديد عند حفظ الفاتورة.</p>
+        </div>
+      </Modal>
 
       {inv && returning && <ReturnDialog inv={inv} onClose={() => setReturning(false)} />}
       <Modal open={!!inv && !returning} onClose={() => setViewId(null)} title={inv ? `فاتورة ${inv.invoice_number}` : ''}
         footer={<>
-          {inv && inv.status === 'completed' && canSell && <Button className="me-auto" onClick={() => setReturning(true)}>إرجاع أصناف</Button>}
+          {inv && inv.status === 'completed' && canSell && (inv.sales_payments.some((p) => p.method === 'credit')
+            ? <span className="me-auto text-xs text-muted">مرتجع فواتير الآجل غير متاح بعد</span>
+            : <Button className="me-auto" onClick={() => setReturning(true)}>إرجاع أصناف</Button>)}
           <Button onClick={() => setViewId(null)}>إغلاق</Button>
         </>}>
         {inv && (
@@ -146,7 +190,7 @@ export default function Sales() {
               <p className="flex justify-between text-base font-bold"><span>الصافي</span><span>{formatEGP(toMinor(inv.total))}</span></p>
             </div>
             {inv.sales_payments.length > 0 && (
-              <ul className="space-y-1">{inv.sales_payments.map((p) => <li key={p.id} className="flex justify-between"><span className="text-muted">{METHOD_AR[p.method]}</span><span>{formatEGP(toMinor(p.amount))}</span></li>)}</ul>
+              <ul className="space-y-1">{inv.sales_payments.map((p) => <li key={p.id} className="flex justify-between"><span className="text-muted">{SALE_METHOD_AR[p.method]}</span><span>{formatEGP(toMinor(p.amount))}</span></li>)}</ul>
             )}
             {inv.notes && <p className="text-muted" dir="auto">{inv.notes}</p>}
           </div>
@@ -156,7 +200,7 @@ export default function Sales() {
   )
 }
 
-function NewInvoice({ onClose }: { onClose: () => void }) {
+function NewInvoice({ onClose, initial }: { onClose: () => void; initial: Held | null }) {
   const qc = useQueryClient()
   const products = useProducts()
   const stock = useStock()
@@ -164,12 +208,19 @@ function NewInvoice({ onClose }: { onClose: () => void }) {
   const settings = useSettings()
   const { hasRole } = useAuth()
 
-  const [lines, setLines] = useState<Line[]>([])
+  const [lines, setLines] = useState<Line[]>(initial?.lines ?? [])
   const [find, setFind] = useState('')
-  const [discount, setDiscount] = useState('')
+  const [discount, setDiscount] = useState(initial && Number(initial.discount) > 0 ? String(initial.discount) : '')
   const [pays, setPays] = useState<Pay[]>([{ method: 'cash', amount: '' }])
-  const [customer, setCustomer] = useState({ name: '', phone: '', notes: '' })
+  const [customer, setCustomer] = useState({ name: initial?.customer_name ?? '', phone: initial?.customer_phone ?? '', notes: initial?.notes ?? '' })
   const [err, setErr] = useState<unknown>(null)
+  const [idem] = useState(() => crypto.randomUUID()) // one key per form: a double click can never sell twice
+  const customers = useCustomers()
+  const [custId, setCustId] = useState<string | null>(null)
+  const [custFind, setCustFind] = useState('')
+  const [addingCust, setAddingCust] = useState(false)
+  const cust = customers.data?.find((c) => c.id === custId) ?? null
+  const custResults = custFind.trim() ? (customers.data ?? []).filter((c) => c.is_active && matchCustomer(c, custFind)).slice(0, 6) : []
 
   const catalog = useMemo(() => {
     const out: { id: string; label: string; price: number; barcode: string | null; sku: string; stock: number; tracked: boolean }[] = []
@@ -210,6 +261,27 @@ function NewInvoice({ onClose }: { onClose: () => void }) {
   const needsApproval = discMinor > 0 && discMinor > (subtotal * limitPct) / 100 && !hasRole('owner')
   const usesCash = pays.some((p) => p.method === 'cash' && p.amount)
   const noDrawer = usesCash && !session.isLoading && !session.data && !needsApproval
+  const creditMinor = pays.reduce((s, p) => { try { return s + (p.method === 'credit' && p.amount ? toMinor(p.amount) : 0) } catch { return s } }, 0)
+  const creditRoom = cust ? toMinor(cust.credit_limit) - cust.balance : 0
+  const overLimit = !!cust && creditMinor > 0 && creditMinor > creditRoom && !hasRole('owner')
+  const payload = () => ({
+    p_customer_name: customer.name || null,
+    p_customer_phone: customer.phone || null,
+    p_discount: Number(fromMinor(Math.max(discMinor, 0))),
+    p_notes: customer.notes || null,
+    p_lines: lines.map((l) => (l.serials ? { variant_id: l.variant_id, serials: l.serials } : { variant_id: l.variant_id, qty: l.qty })),
+  })
+  const hold = useMutation({
+    mutationFn: async () => {
+      if (lines.length === 0) throw new Error('basket is empty')
+      const p = payload()
+      const { error } = await supabase.rpc('hold_basket', { p_label: cust?.name || customer.name || null, p_customer_name: p.p_customer_name, p_customer_phone: p.p_customer_phone,
+        p_discount: p.p_discount, p_notes: p.p_notes, p_lines: p.p_lines, p_replace: initial?.id ?? null })
+      if (error) throw error
+    },
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['sales', 'held'] }); onClose() },
+    onError: (e) => setErr(e),
+  })
 
   const save = useMutation({
     mutationFn: async () => {
@@ -217,19 +289,22 @@ function NewInvoice({ onClose }: { onClose: () => void }) {
       if (missingSerials) throw new Error('serial numbers required')
       if (discMinor < 0) throw new Error('الخصم رقم صحيح بحد أقصى خانتين عشريتين.')
       if (remaining !== 0) throw new Error('payments must equal the invoice total')
-      const { data, error } = await supabase.rpc('create_sale', {
-        p_customer_name: customer.name || null,
-        p_customer_phone: customer.phone || null,
-        p_discount: Number(fromMinor(Math.max(discMinor, 0))),
-        p_notes: customer.notes || null,
-        p_lines: lines.map((l) => (l.serials ? { variant_id: l.variant_id, serials: l.serials } : { variant_id: l.variant_id, qty: l.qty })),
-        p_payments: pays.filter((p) => p.amount).map((p) => ({ method: p.method, amount: Number(fromMinor(toMinor(p.amount))) })),
+      if (creditMinor > 0 && !cust) throw new Error('customer required for credit sale')
+      const { data, error } = await supabase.rpc('create_sale_once', {
+        p_idem: idem,
+        ...payload(),
+        p_payments: pays.filter((p) => p.amount).map((p) => ({
+          method: p.method, amount: Number(fromMinor(toMinor(p.amount))),
+          ...(p.method !== 'cash' && p.method !== 'credit' && p.account ? { account: p.account } : {}),
+        })),
+        p_held: initial?.id ?? null,
+        p_customer: cust?.id ?? null,
       })
       if (error) throw error
       return data
     },
     onSuccess: () => {
-      ;['sales', 'stock', 'approvals', 'products', 'cash'].forEach((k) => qc.invalidateQueries({ queryKey: [k] }))
+      ;['sales', 'stock', 'approvals', 'products', 'cash', 'customers', 'drawers', 'accounts'].forEach((k) => qc.invalidateQueries({ queryKey: [k] }))
       onClose()
     },
     onError: (e) => setErr(e),
@@ -238,8 +313,9 @@ function NewInvoice({ onClose }: { onClose: () => void }) {
   return (
     <Modal open wide onClose={onClose} title="فاتورة بيع جديدة"
       footer={<>
+        <Button className="me-auto" disabled={hold.isPending || lines.length === 0} onClick={() => { setErr(null); hold.mutate() }}>تعليق الفاتورة</Button>
         <Button onClick={onClose}>إلغاء</Button>
-        <Button variant="primary" disabled={save.isPending || lines.length === 0 || remaining !== 0 || missingSerials} onClick={() => { setErr(null); save.mutate() }}>
+        <Button variant="primary" disabled={save.isPending || lines.length === 0 || remaining !== 0 || missingSerials || overLimit} onClick={() => { setErr(null); save.mutate() }}>
           {save.isPending ? 'جارٍ الحفظ…' : needsApproval ? 'إرسال للمالك للموافقة' : 'حفظ الفاتورة'}
         </Button>
       </>}>
@@ -291,6 +367,35 @@ function NewInvoice({ onClose }: { onClose: () => void }) {
           </ul>
         )}
 
+        <div className="rounded-xl border border-line p-3">
+          {cust ? (
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold" dir="auto">{cust.name} <bdi className="text-xs font-normal text-muted">{cust.code} · {cust.phone}</bdi></p>
+                <p className="text-xs text-muted">عليه {formatEGP(cust.balance)} · حد الآجل {formatEGP(toMinor(cust.credit_limit))} · المتاح للآجل {formatEGP(Math.max(creditRoom, 0))}</p>
+              </div>
+              <Button small onClick={() => { setCustId(null); setPays((ps) => ps.map((p) => (p.method === 'credit' ? { ...p, method: 'cash' } : p))) }}>تغيير العميل</Button>
+            </div>
+          ) : (
+            <div className="relative">
+              <Field label="عميل مسجل (مطلوب للبيع الآجل)">
+                <input className={inputCls} dir="auto" placeholder="ابحث بالاسم أو رقم الهاتف" value={custFind} onChange={(e) => setCustFind(e.target.value)} />
+              </Field>
+              {custFind.trim() && (
+                <ul className="absolute inset-x-0 z-10 mt-1 max-h-60 animate-fade overflow-y-auto rounded-xl border border-line bg-surface shadow-float">
+                  {custResults.map((c) => (
+                    <li key={c.id}><button className="flex w-full items-center justify-between gap-3 px-3 py-2 text-start text-sm hover:bg-bg"
+                      onClick={() => { setCustId(c.id); setCustFind(''); setCustomer((x) => ({ ...x, name: c.name, phone: c.phone })) }}>
+                      <span dir="auto">{c.name}</span><bdi className="text-xs text-muted">{c.phone}</bdi></button></li>
+                  ))}
+                  <li><button className="w-full px-3 py-2 text-start text-sm font-medium text-accent hover:bg-bg" onClick={() => setAddingCust(true)}>+ إضافة عميل جديد</button></li>
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+        {addingCust && <CustomerForm customer={null} onClose={() => setAddingCust(false)} onSaved={(id) => { setCustId(id); setCustFind('') }} />}
+
         <div className="grid gap-3 sm:grid-cols-3">
           <Field label="اسم العميل (اختياري)"><input className={inputCls} dir="auto" value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} /></Field>
           <Field label="هاتف العميل (اختياري)"><input className={inputCls} dir="ltr" inputMode="tel" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} /></Field>
@@ -311,16 +416,24 @@ function NewInvoice({ onClose }: { onClose: () => void }) {
           </div>
           {pays.map((p, i) => (
             <div key={i} className="flex flex-wrap items-end gap-2">
-              <select aria-label="طريقة الدفع" className={`${inputCls} !w-36`} value={p.method} onChange={(e) => setPays(pays.map((x, j) => (j === i ? { ...x, method: e.target.value as Method } : x)))}>
-                {Object.entries(METHOD_AR).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              <select aria-label="طريقة الدفع" className={`${inputCls} !w-36`} value={p.method} onChange={(e) => setPays(pays.map((x, j) => (j === i ? { ...x, method: e.target.value as SaleMethod } : x)))}>
+                {Object.entries(SALE_METHOD_AR).map(([k, l]) => <option key={k} value={k} disabled={k === 'credit' && !cust}>{l}{k === 'credit' && !cust ? ' (اختر عميلًا)' : ''}</option>)}
               </select>
               <input aria-label="المبلغ" className={`${inputCls} !w-40`} dir="ltr" inputMode="decimal" placeholder="المبلغ" value={p.amount} onChange={(e) => setPays(pays.map((x, j) => (j === i ? { ...x, amount: e.target.value } : x)))} />
+              {p.method !== 'cash' && p.method !== 'credit' && (
+                <AccountSelect value={p.account ?? ''} onChange={(id) => setPays(pays.map((x, j) => (j === i ? { ...x, account: id } : x)))} />
+              )}
               {remaining > 0 && !p.amount && <Button small onClick={() => setPays(pays.map((x, j) => (j === i ? { ...x, amount: fromMinor(remaining) } : x)))}>الباقي {formatEGP(remaining)}</Button>}
               {pays.length > 1 && <Button small variant="danger" onClick={() => setPays(pays.filter((_, j) => j !== i))}>إزالة</Button>}
             </div>
           ))}
         </div>
 
+        {overLimit && (
+          <p role="alert" className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
+            مبلغ الآجل ({formatEGP(creditMinor)}) أكبر من المتاح للعميل ({formatEGP(Math.max(creditRoom, 0))}). زوّد المدفوع الآن أو اطلب من المالك رفع الحد.
+          </p>
+        )}
         <div className="space-y-1 rounded-xl bg-bg p-4 text-sm">
           <p className="flex justify-between"><span className="text-muted">قبل الخصم</span><span>{formatEGP(subtotal)}</span></p>
           {discMinor > 0 && <p className="flex justify-between"><span className="text-muted">الخصم</span><span>- {formatEGP(discMinor)}</span></p>}

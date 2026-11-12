@@ -90,11 +90,12 @@ do $$ declare a uuid; f boolean := false; begin
 end $$;
 
 -- 4. cashier return always waits for the owner; no refund until approved
-do $$ declare a uuid; r public.sales_returns; before_total numeric; n int; st text; begin
+do $$ declare a uuid; r public.sales_returns; before_total numeric; n int; st text; lj jsonb; begin
   select v into a from t_ids where k = 'A';
   before_total := pg_temp.refunds_total();
+  lj := pg_temp.lines(a, 1);  -- built before switching role: a cashier cannot read another user's invoice lines
   perform pg_temp.as_user('00000000-0000-0000-0000-0000000000c1');
-  r := public.create_return(a, pg_temp.lines(a, 1), 'عيب في الشاشة', 'cash'); reset role;
+  r := public.create_return(a, lj, 'عيب في الشاشة', 'cash'); reset role;
   select count(*) into n from public.sales_refunds where return_id = r.id;
   perform pg_temp.rec('cashier return waits for owner, no refund yet', r.status = 'pending_approval' and n = 0 and pg_temp.refunds_total() = before_total, r.status);
   perform pg_temp.as_user('00000000-0000-0000-0000-0000000000a1');
@@ -105,10 +106,11 @@ do $$ declare a uuid; r public.sales_returns; before_total numeric; n int; st te
 end $$;
 
 -- 5. rejected return frees the quantity again (A: 3 sold, 2 returned, 1 left)
-do $$ declare a uuid; r public.sales_returns; st text; ok boolean := true; begin
+do $$ declare a uuid; r public.sales_returns; st text; ok boolean := true; lj jsonb; begin
   select v into a from t_ids where k = 'A';
+  lj := pg_temp.lines(a, 1);  -- built before switching role (see test 4)
   perform pg_temp.as_user('00000000-0000-0000-0000-0000000000c1');
-  r := public.create_return(a, pg_temp.lines(a, 1), 'تجربة', 'cash'); reset role;
+  r := public.create_return(a, lj, 'تجربة', 'cash'); reset role;
   perform pg_temp.as_user('00000000-0000-0000-0000-0000000000a1');
   perform public.decide_approval(r.approval_id, 'rejected', 'no'); reset role;
   select status into st from public.sales_returns where id = r.id;
@@ -153,9 +155,10 @@ do $$ declare s public.cash_sessions; calc numeric; c public.sales_invoices; beg
   perform pg_temp.as_user('00000000-0000-0000-0000-0000000000b1');
   c := public.create_sale(null,null,0,null, pg_temp.items(1), pg_temp.pay(1000)); reset role;
   insert into t_ids values ('C', c.id);
-  perform pg_temp.as_user('00000000-0000-0000-0000-0000000000c1');
+  -- computed before switching role: RLS hides other users' payments from the cashier, which would give a wrong total
   select 100 + (select coalesce(sum(amount),0) from public.sales_payments where method = 'cash' and session_id = (select id from public.cash_sessions where status = 'open'))
              - (select coalesce(sum(amount),0) from public.sales_refunds where method = 'cash' and session_id = (select id from public.cash_sessions where status = 'open')) into calc;
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000000000c1');
   s := public.close_cash_session(calc); reset role;
   perform pg_temp.rec('drawer expected cash subtracts cash refunds', s.expected_cash = calc and s.difference = 0, 'expected='||s.expected_cash||' calc='||calc);
 end $$;

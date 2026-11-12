@@ -8,6 +8,7 @@ import { formatEGP, fromMinor, toMinor } from '../lib/money'
 import { cairoBusinessDate, formatCairo } from '../lib/time'
 import { Button, Card, Chip, ErrorText, Field, inputCls, Modal, PageHeader } from '../components/ui'
 import { State } from '../components/State'
+import SourcePicker from '../components/SourcePicker'
 import { useSettings } from '../lib/settings'
 
 type Exp = {
@@ -204,15 +205,17 @@ function ExpenseDialog({ ex, canPay, onClose }: { ex: Exp; canPay: boolean; onCl
     },
   })
 
+  const [src, setSrc] = useState({ drawer: '', account: '' })
   const pay = useMutation({
     mutationFn: async () => {
       let a = 0
       try { a = toMinor(amount) } catch { a = 0 }
       if (a <= 0) throw new Error('أدخل مبلغًا صحيحًا.')
-      const { error } = await supabase.rpc('pay_expense', { p_expense: ex.id, p_amount: Number(fromMinor(a)), p_method: method, p_note: note || null })
+      const { error } = await supabase.rpc('pay_expense_from', { p_expense: ex.id, p_amount: Number(fromMinor(a)), p_method: method, p_note: note || null,
+        p_drawer: method === 'cash' ? src.drawer || null : null, p_account: method !== 'cash' ? src.account || null : null })
       if (error) throw error
     },
-    onSuccess: () => { ['expenses', 'cash', 'expense-payments'].forEach((k) => qc.invalidateQueries({ queryKey: [k] })); onClose() },
+    onSuccess: () => { ['expenses', 'cash', 'expense-payments', 'drawers', 'accounts'].forEach((k) => qc.invalidateQueries({ queryKey: [k] })); onClose() },
     onError: setErr,
   })
   const s = state(ex)
@@ -245,6 +248,7 @@ function ExpenseDialog({ ex, canPay, onClose }: { ex: Exp; canPay: boolean; onCl
               <select aria-label="طريقة الدفع" className={`${inputCls} !w-36`} value={method} onChange={(e) => setMethod(e.target.value as Method)}>
                 {Object.entries(METHOD_AR).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
               </select>
+              <SourcePicker className="!w-56" method={method} drawer={src.drawer} account={src.account} onDrawer={(d) => setSrc({ ...src, drawer: d })} onAccount={(a) => setSrc({ ...src, account: a })} />
               <input aria-label="ملاحظة" className={`${inputCls} min-w-0 flex-1`} placeholder="ملاحظة (اختياري)" dir="auto" value={note} onChange={(e) => setNote(e.target.value)} />
               <Button variant="primary" disabled={pay.isPending} onClick={() => { setErr(null); pay.mutate() }}>{pay.isPending ? '…' : 'دفع'}</Button>
             </div>

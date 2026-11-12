@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
 
 export const inputCls =
-  'w-full rounded-lg border border-line bg-bg px-3 py-2.5 text-sm outline-none transition focus:border-accent disabled:opacity-50'
+  'w-full rounded-[10px] border border-line bg-surface px-3 py-2.5 text-sm shadow-soft outline-none disabled:opacity-50'
 
 export function Field({
   label,
@@ -29,14 +29,14 @@ type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 }
 export function Button({ variant = 'ghost', small, className = '', ...p }: BtnProps) {
   const v = {
-    primary: 'bg-accent text-accent-fg hover:opacity-90',
-    ghost: 'border border-line bg-surface hover:bg-bg',
-    danger: 'border border-danger/40 text-danger hover:bg-danger/10',
+    primary: 'bg-accent text-accent-fg shadow-soft hover:brightness-110',
+    ghost: 'border border-line bg-surface shadow-soft hover:bg-bg',
+    danger: 'border border-danger/40 bg-surface text-danger hover:bg-danger/10',
   }[variant]
   return (
     <button
       {...p}
-      className={`inline-flex items-center justify-center gap-2 rounded-lg font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
+      className={`inline-flex items-center justify-center gap-2 rounded-[10px] font-medium transition duration-150 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 ${
         small ? 'px-3 py-1.5 text-xs' : 'px-4 py-2.5 text-sm'
       } ${v} ${className}`}
     />
@@ -68,9 +68,9 @@ export function PageHeader({
   actions?: ReactNode
 }) {
   return (
-    <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-2xl font-bold">{title}</h1>
+        <h1 className="text-[1.7rem] font-bold leading-tight tracking-tight">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
       </div>
       <div className="flex flex-wrap gap-2">{actions}</div>
@@ -79,7 +79,7 @@ export function PageHeader({
 }
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-2xl border border-line bg-surface ${className}`}>{children}</div>
+  return <div className={`rounded-2xl border border-line/70 bg-surface shadow-soft ${className}`}>{children}</div>
 }
 
 export function Modal({
@@ -109,20 +109,21 @@ export function Modal({
       ref={ref}
       onClose={onClose}
       onClick={(e) => e.target === ref.current && onClose()}
-      className={`m-auto w-[calc(100%-1.5rem)] rounded-2xl border border-line bg-surface p-0 text-fg backdrop:bg-black/60 ${
+      className={`m-auto w-[calc(100%-1.5rem)] overflow-hidden rounded-[18px] border border-line/60 bg-surface p-0 text-fg ${
         wide ? 'max-w-4xl' : 'max-w-lg'
       }`}
     >
       {open && (
         <div className="flex max-h-[88vh] flex-col">
-          <div className="flex items-center justify-between border-b border-line px-5 py-4">
-            <h2 className="text-lg font-bold">{title}</h2>
-            <button aria-label="إغلاق" onClick={onClose} className="rounded-lg px-2 py-1 text-muted hover:text-fg">
+          <div className="flex items-center justify-between border-b border-line/70 bg-bg/60 px-5 py-3.5">
+            <h2 className="text-base font-bold">{title}</h2>
+            <button aria-label="إغلاق" onClick={onClose}
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-muted/15 text-xs text-muted transition hover:bg-danger hover:text-white active:scale-90">
               ✕
             </button>
           </div>
           <div className="overflow-y-auto p-5">{children}</div>
-          {footer && <div className="flex flex-wrap justify-end gap-2 border-t border-line px-5 py-3">{footer}</div>}
+          {footer && <div className="flex flex-wrap justify-end gap-2 border-t border-line/70 bg-bg/60 px-5 py-3">{footer}</div>}
         </div>
       )}
     </dialog>
@@ -165,6 +166,17 @@ const ERR: [RegExp, string][] = [
   [/invoice not returnable/i, 'هذه الفاتورة غير قابلة للإرجاع.'],
   [/line is not awaiting inspection/i, 'هذه القطعة تم فحصها بالفعل.'],
   [/reason required/i, 'السبب مطلوب.'],
+  [/repair already open/i, 'فيه أمر صيانة مفتوح لنفس الجهاز في الفرع. ابحث بالسيريال أو IMEI.'],
+  [/customer approval required/i, 'لازم العميل يوافق على التسعيرة الأول (من الكاشير) قبل بدء الإصلاح.'],
+  [/parts not available/i, 'القطع المطلوبة لسه ما وصلتش المخزن.'],
+  [/diagnosis required/i, 'اكتب المشكلة اللي لقيتها في الجهاز.'],
+  [/invalid cost|invalid quantity/i, 'التكلفة أو الكمية غير صحيحة.'],
+  [/part unavailable/i, 'إحدى القطع غير متاحة أو موقوفة.'],
+  [/duplicate part/i, 'قطعة مكررة في التسعيرة.'],
+  [/request is not pending|request is not approved/i, 'الطلب اتغيّرت حالته. حدّث الصفحة.'],
+  [/repair has changed/i, 'اتحدّث الأمر من جهاز تاني. اقفل التفاصيل وافتحها تاني قبل الحفظ.'],
+  [/repair intake date in past/i, 'موعد التسليم لازم يكون بعد وقت استلام الجهاز.'],
+  [/invalid repair status transition/i, 'الحالة المختارة مش متاحة في الخطوة دي.'],
   [/supplier_invoices_supplier_id_invoice_number/i, 'رقم الفاتورة مسجل من قبل لهذا المورد.'],
   [/devices_serial_key|duplicate serial in list/i, 'سيريال / IMEI مسجل من قبل أو مكرر في القائمة.'],
   [/invalid serial/i, 'سيريال غير صحيح (من 5 إلى 40 حرفًا/رقمًا).'],
@@ -181,6 +193,49 @@ const ERR: [RegExp, string][] = [
   [/no received goods/i, 'الطلبية لم تُستلم بعد، لا يمكن تسجيل فاتورة عليها.'],
   [/invoice is not open for payment/i, 'الفاتورة بانتظار موافقة المالك أو مرفوضة.'],
   [/does not belong to this supplier/i, 'هذا العنصر لا يخص هذا المورد.'],
+  [/repair balance due/i, 'لازم يتسدد المتبقي على الجهاز قبل التسليم.'],
+  [/payment exceeds balance/i, 'المبلغ أكبر من المتبقي على الأمر.'],
+  [/refund exceeds paid/i, 'المبلغ المردود أكبر من المدفوع.'],
+  [/repair not quoted/i, 'الأمر لسه ما اتسعّرش.'],
+  [/invalid warranty/i, 'مدة الضمان غير صحيحة.'],
+  [/invalid search/i, 'اكتب 5 حروف على الأقل (سيريال أو IMEI) أو رقم أمر مثل RP-12.'],
+  [/invalid payment/i, 'بيانات الدفع غير صحيحة.'],
+  [/repair has changed/i, 'الأمر اتغيّر. حدّث الصفحة وحاول تاني.'],
+  [/invalid repair status transition/i, 'الانتقال بين الحالات ده غير مسموح.'],
+  [/insufficient drawer balance/i, 'رصيد الدرج لا يكفي لهذا التحويل.'],
+  [/override required/i, 'هذا المبلغ يحتاج موافقة مدير بالرقم السري.'],
+  [/note required when there is a difference/i, 'اكتب سبب الفرق قبل إغلاق الوردية.'],
+  [/a cash session is already open/i, 'هناك وردية مفتوحة بالفعل.'],
+  [/no change/i, 'الرصيد الحالي مطابق، لا يوجد تغيير.'],
+  [/reason required/i, 'اكتب سبب التعديل.'],
+  [/invalid drawers/i, 'اختر درجين صحيحين.'],
+  [/invalid count/i, 'أرقام العدّ غير صحيحة.'],
+  [/invalid shift employee/i, 'الموظف المختار لا يمكنه فتح وردية.'],
+  [/customer required for credit sale/i, 'البيع الآجل يحتاج عميلًا مسجلًا. اختر العميل أولًا.'],
+  [/credit limit exceeded/i, 'المبلغ يتجاوز حد الآجل المسموح للعميل. زوّد المدفوع أو اطلب من المالك رفع الحد.'],
+  [/customer phone exists/i, 'رقم الهاتف مسجل لعميل آخر.'],
+  [/customer not found/i, 'العميل غير موجود أو موقوف.'],
+  [/invalid national id/i, 'الرقم القومي يجب أن يكون 14 رقمًا.'],
+  [/invalid phone/i, 'رقم الهاتف غير صحيح.'],
+  [/invalid customer name/i, 'اكتب اسم العميل.'],
+  [/entry already reversed/i, 'هذا القيد تم إلغاؤه من قبل.'],
+  [/entry cannot be reversed/i, 'هذا النوع من القيود لا يُلغى من هنا.'],
+  [/sale already in progress/i, 'الفاتورة قيد الحفظ بالفعل. انتظر لحظة.'],
+  [/too many held baskets/i, 'وصلت للحد الأقصى من الفواتير المعلّقة (20). أكمل أو احذف بعضها.'],
+  [/basket is empty|invalid basket/i, 'لا يمكن تعليق فاتورة فارغة أو غير مكتملة.'],
+  [/insufficient account balance/i, 'رصيد الحساب لا يكفي (أو سينزل تحت أقل رصيد مسموح).'],
+  [/account daily limit exceeded/i, 'تجاوزت الحد اليومي لهذا الحساب.'],
+  [/account monthly limit exceeded/i, 'تجاوزت الحد الشهري لهذا الحساب.'],
+  [/account name exists/i, 'يوجد حساب بنفس الاسم.'],
+  [/invalid account/i, 'الحساب غير صحيح أو موقوف.'],
+  [/alert already reviewed/i, 'هذا التنبيه تمت مراجعته من قبل.'],
+  [/credit invoice return not supported/i, 'مرتجع فواتير الآجل غير متاح بعد.'],
+  [/rate limit exceeded/i, 'عدد العمليات كبير في وقت قصير. انتظر دقيقة ثم حاول مرة أخرى.'],
+  [/no open shift/i, 'لا توجد وردية مفتوحة. افتح الدرج أولاً ثم سجّل البيع.'],
+  [/pin must be 6 to 8 digits/i, 'الرقم السري يجب أن يكون من 6 إلى 8 أرقام.'],
+  [/pin too easy/i, 'الرقم السري سهل التخمين. اختر رقماً آخر.'],
+  [/override invalid/i, 'تصريح المدير غير صالح أو انتهت مدته.'],
+  [/cannot target yourself/i, 'لا يمكنك تنفيذ هذا الإجراء على حسابك.'],
 ]
 export function translateError(m: string) {
   const known = ERR.find(([re]) => re.test(m))?.[1]
@@ -191,6 +246,7 @@ export function translateError(m: string) {
 }
 
 const ICONS: Record<string, string> = {
+  repair: 'M14.7 6.3a4 4 0 0 0-5.2 5.2l-5.8 5.8a2.1 2.1 0 0 0 3 3l5.8-5.8a4 4 0 0 0 5.2-5.2L15 12l-3-3z',
   home: 'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
   box: 'M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8',
   stock: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
@@ -203,6 +259,8 @@ const ICONS: Record<string, string> = {
   swap: 'M7 7h13l-3-3M17 17H4l3 3',
   globe: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18',
   log: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
+  users: 'M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM20 20v-1.5a3.5 3.5 0 0 0-2.5-3.3M15.5 4.2a3.5 3.5 0 0 1 0 6.6',
+  shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4',
 }
 export function Icon({ name, className = 'h-5 w-5' }: { name: string; className?: string }) {
   return (

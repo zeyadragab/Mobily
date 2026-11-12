@@ -55,6 +55,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [uid])
 
+  // Force logout: the owner can end a user's sessions. Check on focus and every minute.
+  // Only an explicit `false` signs out; a network or missing-function error never does.
+  useEffect(() => {
+    if (!uid) return
+    let stopped = false
+    const check = async () => {
+      const { data, error } = await supabase.rpc('is_current_session_valid')
+      if (!stopped && !error && data === false) await supabase.auth.signOut()
+    }
+    const t = window.setInterval(check, 60_000)
+    const onFocus = () => void check()
+    window.addEventListener('focus', onFocus)
+    void check()
+    return () => {
+      stopped = true
+      window.clearInterval(t)
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [uid])
+
   const value: AuthState = {
     loading,
     session,

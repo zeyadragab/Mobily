@@ -108,6 +108,7 @@ export type CashSession = {
   counted_cash: string | null
   difference: string | null
   close_note: string | null
+  shift_no?: number
 }
 
 /** The currently open cash drawer session (or null). */
@@ -125,6 +126,9 @@ export function useOpenSession(enabled = true) {
 
 export const METHOD_AR = { cash: 'نقدي', card: 'فيزا', transfer: 'تحويل', wallet: 'محفظة' } as const
 export type Method = keyof typeof METHOD_AR
+/** Sales only: part of an invoice may stay on the customer's account. */
+export const SALE_METHOD_AR = { ...METHOD_AR, credit: 'آجل' } as const
+export type SaleMethod = keyof typeof SALE_METHOD_AR
 
 export const CONDITION_AR = { new: 'جديد', used: 'مستعمل', refurbished: 'مجدد' } as const
 
