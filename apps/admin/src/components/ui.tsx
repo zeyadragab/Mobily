@@ -262,6 +262,12 @@ const ERR: [RegExp, string][] = [
   [/pin too easy/i, 'الرقم السري سهل التخمين. اختر رقماً آخر.'],
   [/override invalid/i, 'تصريح المدير غير صالح أو انتهت مدته.'],
   [/cannot target yourself/i, 'لا يمكنك تنفيذ هذا الإجراء على حسابك.'],
+  [/order not delivered/i, 'الأمر مش متسلّم، فمفيش تسليم يتلغى.'],
+  [/repair has customer debt/i, 'على الأمر متبقي على حساب العميل. الغ التسليم الأول قبل تغيير العميل.'],
+  [/reason too long/i, 'السبب أطول من 250 حرف.'],
+  [/brand exists/i, 'الماركة دي موجودة بالفعل.'],
+  [/invalid brand/i, 'اسم الماركة غير صحيح (من 1 إلى 60 حرف).'],
+  [/invalid amount/i, 'المبلغ غير صحيح.'],
 ]
 export function translateError(m: string) {
   const known = ERR.find(([re]) => re.test(m))?.[1]

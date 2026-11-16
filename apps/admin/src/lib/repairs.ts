@@ -44,7 +44,9 @@ export type RepairDetail = RepairOrder & {
   missing_identifier_reason: string | null; complaint: string; intake_condition: string
   accessories: string | null; diagnosis: string | null; custody_location: string; revision: number
   warranty_days: number | null; warranty_until: string | null
+  customer_id: string | null; brand: string | null; expected_price: number | string | null; credit_amount: number | string
 }
+export type RepairBrand = { id: string; name: string; name_ar: string | null; is_active: boolean; sort: number }
 export const REPAIR_LIST_COLUMNS = 'id,order_number,branch_id,device_model,customer_name,customer_phone,status,technician,due_at,received_at,delivered_at,labor_cost,parts_cost,quote_total,quoted_at,customer_informed_at,customer_decision'
 
 export type RepairPart = { id: string; name: string; sku: string | null; unit_price: number; is_active: boolean }
@@ -131,6 +133,17 @@ export function useRepairTemplates() {
       const { data, error } = await supabase.from('repair_templates').select('id,name,default_labor,default_warranty_days,notes,is_active').order('name')
       if (error) throw error
       return data as RepairTemplate[]
+    },
+  })
+}
+
+export function useRepairBrands() {
+  return useQuery({
+    queryKey: ['repair-brands'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('repair_brands').select('id,name,name_ar,is_active,sort').eq('is_active', true).order('sort').order('name')
+      if (error) throw error
+      return data as RepairBrand[]
     },
   })
 }

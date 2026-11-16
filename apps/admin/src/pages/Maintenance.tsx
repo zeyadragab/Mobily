@@ -167,6 +167,18 @@ function PartRequests({ query, canManage }: { query: ReturnType<typeof useQuery<
 
 function PartsCatalog() {
   const client = useQueryClient()
+  const { hasRole } = useAuth()
+  const canSeeCost = hasRole('owner', 'manager', 'accountant')   // cost is hidden from cashiers and technicians by the database
+  const canSetCost = hasRole('owner', 'manager')
+  const costs = useQuery({
+    queryKey: ['repair-part-costs'],
+    enabled: canSeeCost,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('repair_part_costs')
+      if (error) throw error
+      return new Map((data as { part_id: string; cost: number | string }[]).map((r) => [r.part_id, toMinor(r.cost)]))
+    },
+  })
   const [branchId, setBranchId] = useState('')
   const [editing, setEditing] = useState<RepairPart | null>(null)
   const branches = useQuery({
@@ -197,17 +209,27 @@ function PartsCatalog() {
   })
   const refresh = () => Promise.all([
     client.invalidateQueries({ queryKey: ['repair-parts'] }), client.invalidateQueries({ queryKey: ['repair-parts-all'] }),
-    client.invalidateQueries({ queryKey: ['repair-part-levels'] }),
+    client.invalidateQueries({ queryKey: ['repair-part-levels'] }), client.invalidateQueries({ queryKey: ['repair-part-costs'] }),
   ])
   const save = useMutation({
     mutationFn: async (form: FormData) => {
       let price: string
       try { price = fromMinor(toMinor(String(form.get('price') ?? '').trim())) } catch { throw new Error('اكتب سعر البيع بشكل صحيح (أرقام فقط).') }
+      let cost: string | null = null
+      const rawCost = String(form.get('cost') ?? '').trim()
+      if (canSetCost && rawCost) {
+        try { cost = fromMinor(toMinor(rawCost)) } catch { throw new Error('اكتب تكلفة القطعة بشكل صحيح (أرقام فقط).') }
+      }
+      const id = editing?.id ?? crypto.randomUUID()
       const { error } = await supabase.rpc('save_repair_part', {
-        p_id: editing?.id ?? crypto.randomUUID(), p_name: form.get('name'), p_sku: form.get('sku'),
+        p_id: id, p_name: form.get('name'), p_sku: form.get('sku'),
         p_price: price, p_active: form.get('active') === 'on',
       })
       if (error) throw error
+      if (cost !== null) {
+        const { error: costError } = await supabase.rpc('set_repair_part_cost', { p_part: id, p_cost: Number(cost) })
+        if (costError) throw costError
+      }
     },
     onSuccess: async () => { setEditing(null); await refresh() },
   })
@@ -226,10 +248,14 @@ function PartsCatalog() {
   }
   return <div className="space-y-4">
     <Card className="p-4">
-      <form key={editing?.id ?? 'new'} onSubmit={submit} className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr_auto_auto] sm:items-end">
+      <form key={editing?.id ?? 'new'} onSubmit={submit}
+        className={`grid gap-3 sm:items-end ${canSetCost ? 'sm:grid-cols-[2fr_1fr_1fr_1fr_auto_auto]' : 'sm:grid-cols-[2fr_1fr_1fr_auto_auto]'}`}>
         <Field label={editing ? 'تعديل قطعة' : 'قطعة غيار جديدة'}><input className={inputCls} name="name" required maxLength={120} defaultValue={editing?.name} placeholder="مثلاً: شاشة آيفون 11" /></Field>
         <Field label="SKU (اختياري)"><input className={inputCls} name="sku" maxLength={60} dir="ltr" defaultValue={editing?.sku ?? ''} /></Field>
         <Field label="سعر البيع للعميل"><input className={inputCls} name="price" required inputMode="decimal" dir="ltr" defaultValue={editing ? fromMinor(toMinor(editing.unit_price)) : ''} /></Field>
+        {canSetCost && <Field label="تكلفة القطعة علينا" hint="بتتسجل على الأمر وقت الإضافة. تغييرها ما بيغيّرش أوامر قديمة.">
+          <input className={inputCls} name="cost" inputMode="decimal" dir="ltr" placeholder="سيبها فاضية لو ما اتغيرتش"
+            defaultValue={editing && costs.data?.has(editing.id) ? fromMinor(costs.data.get(editing.id) ?? 0) : ''} /></Field>}
         <label className="flex items-center gap-2 pb-2 text-sm"><input type="checkbox" name="active" defaultChecked={editing?.is_active ?? true} /> مفعّلة</label>
         <div className="flex gap-2">
           <Button variant="primary" disabled={save.isPending}>{editing ? 'حفظ' : 'إضافة'}</Button>
@@ -250,17 +276,17 @@ function PartsCatalog() {
     {!!parts.data?.length && <Card className="overflow-x-auto">
       <table className="w-full min-w-[640px] text-sm">
         <thead><tr className="border-b border-line text-muted">
-          {['القطعة', 'السعر', 'المتاح بالفرع', 'حركة مخزون', ''].map((label, index) => <th key={index} scope="col" className="p-3 text-start font-medium">{label}</th>)}
+          {['القطعة', 'السعر', ...(canSeeCost ? ['التكلفة'] : []), 'المتاح بالفرع', 'حركة مخزون', ''].map((label, index) => <th key={index} scope="col" className="p-3 text-start font-medium">{label}</th>)}
         </tr></thead>
-        <tbody>{parts.data.map((part) => <PartRow key={part.id} part={part} onHand={levels.data?.find((level) => level.part_id === part.id)?.on_hand ?? 0}
+        <tbody>{parts.data.map((part) => <PartRow key={part.id} part={part} cost={canSeeCost ? (costs.data?.get(part.id) ?? 0) : null} onHand={levels.data?.find((level) => level.part_id === part.id)?.on_hand ?? 0}
           busy={adjust.isPending} onEdit={() => setEditing(part)} onAdjust={(qty, reason, note) => adjust.mutate({ part: part.id, qty, reason, note })} />)}</tbody>
       </table>
     </Card>}
   </div>
 }
 
-function PartRow({ part, onHand, busy, onEdit, onAdjust }: {
-  part: RepairPart; onHand: number; busy: boolean; onEdit: () => void
+function PartRow({ part, cost, onHand, busy, onEdit, onAdjust }: {
+  part: RepairPart; cost: number | null; onHand: number; busy: boolean; onEdit: () => void
   onAdjust: (qty: number, reason: 'receipt' | 'adjustment', note: string) => void
 }) {
   const [qty, setQty] = useState('')
@@ -270,6 +296,7 @@ function PartRow({ part, onHand, busy, onEdit, onAdjust }: {
   return <tr className="border-b border-line last:border-0">
     <td className="p-3"><p dir="auto">{part.name}</p>{part.sku && <bdi className="text-xs text-muted">{part.sku}</bdi>} {!part.is_active && <Chip>موقوفة</Chip>}</td>
     <td className="p-3">{formatEGP(toMinor(part.unit_price))}</td>
+    {cost !== null && <td className="p-3">{cost > 0 ? formatEGP(cost) : <span className="text-muted">لم تُسجَّل</span>}</td>}
     <td className="p-3"><Chip tone={onHand > 0 ? 'ok' : 'danger'}>{onHand}</Chip></td>
     <td className="p-3"><div className="flex flex-wrap gap-2">
       <input aria-label="الكمية" className={`${inputCls} !w-20`} inputMode="numeric" dir="ltr" placeholder="الكمية" value={qty} onChange={(event) => setQty(event.target.value)} />

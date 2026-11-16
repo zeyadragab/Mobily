@@ -24,7 +24,7 @@ export default function RepairOrderDialog({ id, branches, onClose }: {
     queryKey: ['repair', id],
     queryFn: async () => {
       const { data, error } = await supabase.from('repair_orders')
-        .select('id,order_number,branch_id,device_id,customer_name,customer_phone,device_model,serial,imei1,imei2,missing_identifier_reason,complaint,intake_condition,accessories,diagnosis,technician,custody_location,status,due_at,received_at,delivered_at,revision,labor_cost,parts_cost,quote_total,quoted_at,customer_informed_at,customer_decision,warranty_days,warranty_until')
+        .select('id,order_number,branch_id,device_id,customer_name,customer_phone,device_model,serial,imei1,imei2,missing_identifier_reason,complaint,intake_condition,accessories,diagnosis,technician,custody_location,status,due_at,received_at,delivered_at,revision,labor_cost,parts_cost,quote_total,quoted_at,customer_informed_at,customer_decision,warranty_days,warranty_until,customer_id,brand,expected_price,credit_amount')
         .eq('id', id).single()
       if (error) throw error
       return data as RepairDetail
@@ -93,6 +93,7 @@ export default function RepairOrderDialog({ id, branches, onClose }: {
         <dl className="grid gap-3 text-sm sm:grid-cols-2">
           {[
             ['العميل', order.customer_name], ['رقم الموبايل', order.customer_phone], ['الفرع', branch?.name],
+            ['الماركة', order.brand], ['السعر المتوقع', order.expected_price != null ? formatEGP(toMinor(order.expected_price)) : null],
             ['السيريال', order.serial], ['IMEI 1', order.imei1], ['IMEI 2', order.imei2],
             ['سبب عدم توفر الرقم', order.missing_identifier_reason], ['الملحقات', order.accessories],
             ['شكوى العميل', order.complaint], ['حالة الاستلام', order.intake_condition],

@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
-import type { RepairBranch } from '../lib/repairs'
+import { useCustomers } from '../lib/customers'
+import { useRepairBrands, type RepairBranch } from '../lib/repairs'
 import { Button, ErrorText, Field, inputCls, Modal } from './ui'
+import { CustomerPicker } from './WalletBits'
 
 const TEXT_FIELDS = [
-  { name: 'customer_name', label: 'اسم العميل', max: 120, required: true },
-  { name: 'customer_phone', label: 'رقم موبايل العميل', max: 16, required: true, type: 'tel', pattern: '[+]?[0-9]{7,15}', ltr: true },
+  { name: 'customer_name', label: 'اسم العميل', max: 120, required: true, anon: true },
+  { name: 'customer_phone', label: 'رقم موبايل العميل', max: 16, required: true, type: 'tel', pattern: '[+]?[0-9]{7,15}', ltr: true, anon: true },
   { name: 'device_model', label: 'الماركة والموديل واللون', max: 120, required: true },
   { name: 'serial', label: 'السيريال', min: 5, max: 40, ltr: true },
   { name: 'imei1', label: 'IMEI 1', max: 15, pattern: '[0-9]{15}', ltr: true },
@@ -20,18 +22,28 @@ export default function RepairIntake({ branches, branchId, onClose, onReceived }
   branches: RepairBranch[]; branchId: string; onClose: () => void; onReceived: (id: string) => void
 }) {
   const [id] = useState(() => crypto.randomUUID())
+  const client = useQueryClient()
+  const customers = useCustomers()
+  const brands = useRepairBrands()
+  // a registered customer fills the name and phone on the server; the two text fields are then not needed
+  const [custId, setCustId] = useState<string | null>(null)
   const receive = useMutation({
     mutationFn: async (form: FormData) => {
-      const { branch, ...intake } = Object.fromEntries(form.entries())
+      const { branch, ...rest } = Object.fromEntries(form.entries())
+      const intake: Record<string, FormDataEntryValue> = { ...rest }
       if (!['serial', 'imei1', 'imei2', 'missing_identifier_reason'].some((key) => String(intake[key] ?? '').trim())) {
         throw new Error('اكتب السيريال أو IMEI، أو سجّل سبب عدم توفرهم.')
       }
       if (intake.imei1 && intake.imei1 === intake.imei2) throw new Error('رقما IMEI لازم يكونوا مختلفين.')
+      if (custId) intake.customer_id = custId
       const { data, error } = await supabase.rpc('receive_repair', { p_id: id, p_branch: branch, p_intake: intake })
       if (error) throw error
       return data as string
     },
-    onSuccess: onReceived,
+    onSuccess: async (orderId) => {
+      await client.invalidateQueries({ queryKey: ['customers'] })
+      onReceived(orderId)
+    },
   })
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -47,13 +59,26 @@ export default function RepairIntake({ branches, branchId, onClose, onReceived }
             {branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
           </select>
         </Field>
-        {TEXT_FIELDS.map((field) => (
+        <div className="sm:col-span-2">
+          <CustomerPicker customers={customers.data ?? []} loading={customers.isLoading} value={custId} onChange={setCustId} />
+          {custId && <p className="mt-1 text-xs text-muted">الاسم والموبايل هيتاخدوا من حساب العميل، والمتبقي لو اتسلّم على الحساب هيتسجل عليه.</p>}
+        </div>
+        {TEXT_FIELDS.filter((field) => !(custId && 'anon' in field)).map((field) => (
           <Field key={field.name} label={field.label}>
             <input className={inputCls} name={field.name} type={'type' in field ? field.type : 'text'}
               maxLength={field.max} minLength={'min' in field ? field.min : undefined} required={'required' in field}
               pattern={'pattern' in field ? field.pattern : undefined} dir={'ltr' in field ? 'ltr' : 'auto'} />
           </Field>
         ))}
+        <Field label="ماركة الجهاز (اختياري)">
+          <select className={inputCls} name="brand" defaultValue="">
+            <option value="">—</option>
+            {brands.data?.map((b) => <option key={b.id} value={b.name}>{b.name_ar ? `${b.name_ar} · ${b.name}` : b.name}</option>)}
+          </select>
+        </Field>
+        <Field label="السعر المتوقع (اختياري)" hint="تقدير للعميل عند الاستلام، مش التسعيرة النهائية.">
+          <input className={inputCls} name="expected_price" inputMode="decimal" dir="ltr" pattern="[0-9]+([.][0-9]{1,2})?" placeholder="0.00" />
+        </Field>
         <Field label="موعد التسليم المتوقع" hint="بتوقيت القاهرة. سيبه فاضي لو الموعد لسه غير محدد.">
           <input className={inputCls} name="due_at" type="datetime-local" dir="ltr" />
         </Field>
