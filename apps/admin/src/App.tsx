@@ -31,6 +31,9 @@ const Returns = lazy(() => import('./pages/Returns'))
 const Security = lazy(() => import('./pages/Security'))
 const WalletOps = lazy(() => import('./pages/WalletOps'))
 const Bills = lazy(() => import('./pages/Bills'))
+const Installments = lazy(() => import('./pages/Installments'))
+const InOut = lazy(() => import('./pages/InOut'))
+const TradeIn = lazy(() => import('./pages/TradeIn'))
 
 const PAGES: Record<string, React.ReactNode> = {
   '/supplier-accounts': <SupplierAccounts />,
@@ -56,6 +59,9 @@ const PAGES: Record<string, React.ReactNode> = {
   '/returns': <Returns />,
   '/wallet-ops': <WalletOps />,
   '/bills': <Bills />,
+  '/installments': <Installments />,
+  '/inout': <InOut />,
+  '/trade-in': <TradeIn />,
 }
 
 export default function App() {
