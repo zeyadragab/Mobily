@@ -428,8 +428,9 @@ create policy trade_in_sellers_read on public.trade_in_sellers for select to aut
   using (public.has_any_role(array['owner','manager','accountant']::public.app_role[]));
 create trigger audit_trade_ins after insert or update or delete on public.trade_ins
   for each row execute function public.audit_row();
--- No audit trigger on trade_in_sellers: audit_row() copies the whole row (it ignores trigger arguments), which would
--- put the national id into audit_log. The trade_ins row is audited and records who bought what, from whom (name only).
+-- No audit trigger on trade_in_sellers here. 0038 adds one that leaves national_id and address out of the audit copy
+-- (audit_row() drops the columns named in its trigger arguments). The trade_ins row is audited and records who bought what.
+-- (An earlier version of this comment wrongly said audit_row() ignores its arguments.)
 
 -- The device enters stock at cost = price, the same way a supplied device does (devices row, 'received' event,
 -- purchase_receipt movement, cost = average of the devices in stock), with no supplier.
