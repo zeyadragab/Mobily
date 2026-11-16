@@ -3,6 +3,8 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
 import { NAV, ROLE_LABEL } from '../lib/roles'
 import { Icon } from './ui'
+import { useTheme } from '../lib/theme'
+import TopBar, { AlertBanner } from './TopBar'
 
 const GLASS = 'bg-surface/70 backdrop-blur-2xl backdrop-saturate-150'
 
@@ -10,13 +12,7 @@ export default function Shell() {
   const { roles, fullName, hasRole, signOut } = useAuth()
   const { pathname } = useLocation()
   const [open, setOpen] = useState(false)
-  const [dark, setDark] = useState(() => document.documentElement.getAttribute('data-theme') === 'dark')
-  function toggleTheme() {
-    const next = !dark
-    setDark(next)
-    document.documentElement.setAttribute('data-theme', next ? 'dark' : 'light')
-    try { localStorage.setItem('theme', next ? 'dark' : 'light') } catch { /* storage blocked */ }
-  }
+  const { dark, toggle: toggleTheme } = useTheme()
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
@@ -46,7 +42,13 @@ export default function Shell() {
           <p className="mb-1 px-3 text-[11px] font-semibold text-muted">{g}</p>
           {items
             .filter((i) => i.group === g)
-            .map((n) => (
+            .map((n) => n.soon ? (
+              <div key={n.to} aria-disabled="true" title="هذه الصفحة تحت التنفيذ" className="flex cursor-not-allowed items-center gap-3 rounded-[10px] px-3 py-2 text-sm text-muted/70">
+                <Icon name={n.icon} className="h-[18px] w-[18px] opacity-50" />
+                <span className="flex-1">{n.label}</span>
+                <span className="rounded-full bg-fg/[0.07] px-2 py-0.5 text-[10px]">{n.soon}</span>
+              </div>
+            ) : (
               <NavLink
                 key={n.to}
                 to={n.to}
@@ -128,11 +130,15 @@ export default function Shell() {
         </div>
       )}
 
-      <main className="min-w-0 flex-1 px-4 py-6 lg:px-8 lg:py-8">
-        <div key={pathname} className="mx-auto max-w-6xl animate-page">
-          <Outlet />
-        </div>
-      </main>
+      <div className="min-w-0 flex-1">
+        <TopBar />
+        <main className="px-4 py-6 lg:px-8 lg:py-8">
+          <AlertBanner />
+          <div key={pathname} className="mx-auto max-w-6xl animate-page">
+            <Outlet />
+          </div>
+        </main>
+      </div>
     </div>
   )
 }

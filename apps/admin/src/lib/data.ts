@@ -15,6 +15,8 @@ export type Variant = {
   reorder_level: number
   warranty_months: number
   is_active: boolean
+  wholesale_price: string | null
+  attributes: Record<string, string | number | boolean>
 }
 export type Product = {
   id: string
@@ -24,6 +26,8 @@ export type Product = {
   description: string | null
   image_url: string | null
   track_serial: boolean
+  tracking_mode: 'none' | 'imei' | 'serial'
+  unit: string
   is_published: boolean
   is_active: boolean
   categories: { name: string } | null

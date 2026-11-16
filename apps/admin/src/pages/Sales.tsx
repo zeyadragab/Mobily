@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
@@ -14,6 +14,8 @@ import { useSettings } from '../lib/settings'
 import ReturnDialog from '../components/ReturnDialog'
 import SerialPicker from '../components/SerialPicker'
 import { AccountSelect } from '../components/SourcePicker'
+import ApproverPin from '../components/ApproverPin'
+import { offerOpen, previewOffer, useOffers } from '../lib/offers'
 
 type Invoice = {
   id: string
@@ -21,8 +23,11 @@ type Invoice = {
   status: 'completed' | 'pending_approval' | 'void'
   customer_name: string | null
   customer_phone: string | null
+  customer_id?: string | null
   subtotal: string
   discount: string
+  offer_discount?: string
+  price_mode?: 'retail' | 'wholesale'
   total: string
   notes: string | null
   business_date: string
@@ -37,7 +42,9 @@ const STATUS = {
   void: { label: 'ملغاة', tone: 'neutral' },
 } as const
 
-type Line = { variant_id: string; qty: number; serials?: string[] }
+type Line = { variant_id: string; qty: number; serials?: string[]; price?: string }
+type Unc = { name: string; qty: string; price: string; cost: string; reason: string }
+const toMinorSafe = (v: string) => { try { return v ? toMinor(v) : 0 } catch { return 0 } }
 const lq = (l: Line) => (l.serials ? l.serials.length : l.qty)
 type Pay = { method: SaleMethod; amount: string; account?: string }
 type Held = { id: string; label: string | null; customer_name: string | null; customer_phone: string | null; discount: number | string; notes: string | null; lines: Line[]; created_at: string }
@@ -45,6 +52,7 @@ type Held = { id: string; label: string | null; customer_name: string | null; cu
 export default function Sales() {
   const { hasRole } = useAuth()
   const canSell = hasRole('owner', 'manager', 'cashier')
+  const canProfit = hasRole('owner', 'manager', 'accountant')
   const [day, setDay] = useState(cairoBusinessDate())
   const [search, setSearch] = useState('')
   const [creating, setCreating] = useState(false)
@@ -81,6 +89,14 @@ export default function Sales() {
     },
   })
 
+  const log = useQuery({
+    queryKey: ['sales', 'log', day],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('sales_log').select('id,paid,credit,profit,has_uncoded').eq('business_date', day).limit(300)
+      if (error) throw error
+      return new Map((data as { id: string; paid: string; credit: string; profit: string | null; has_uncoded: boolean }[]).map((r) => [r.id, r]))
+    },
+  })
   const rows = useMemo(() => {
     const s = search.trim().toLowerCase()
     return (q.data ?? []).filter(
@@ -123,7 +139,7 @@ export default function Sales() {
         <Card className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-muted"><tr className="border-b border-line">
-              {['الرقم', 'العميل', 'الأصناف', 'الخصم', 'الإجمالي', 'الدفع', 'الحالة', 'الوقت'].map((h) => <th key={h} scope="col" className="p-3 text-start font-medium">{h}</th>)}
+              {['الرقم', 'العميل', 'الأصناف', 'الخصم', 'الإجمالي', 'الدفع', 'آجل', ...(canProfit ? ['الربح'] : []), 'الحالة', 'الوقت'].map((h) => <th key={h} scope="col" className="p-3 text-start font-medium">{h}</th>)}
             </tr></thead>
             <tbody>
               {rows.map((i) => (
@@ -134,6 +150,8 @@ export default function Sales() {
                   <td className="p-3">{toMinor(i.discount) ? formatEGP(toMinor(i.discount)) : '—'}</td>
                   <td className="whitespace-nowrap p-3 font-semibold">{formatEGP(toMinor(i.total))}</td>
                   <td className="p-3 text-xs">{[...new Set(i.sales_payments.map((p) => SALE_METHOD_AR[p.method]))].join('، ') || '—'}</td>
+                  <td className="p-3">{toMinor(log.data?.get(i.id)?.credit ?? '0') ? formatEGP(toMinor(log.data!.get(i.id)!.credit)) : '—'}</td>
+                  {canProfit && <td className="p-3">{log.data?.get(i.id)?.profit != null ? formatEGP(toMinor(log.data.get(i.id)!.profit!)) : '—'}{log.data?.get(i.id)?.has_uncoded && <Chip tone="warn">بدون كود</Chip>}</td>}
                   <td className="p-3"><Chip tone={STATUS[i.status].tone}>{STATUS[i.status].label}</Chip></td>
                   <td className="whitespace-nowrap p-3">{formatCairo(i.created_at)}</td>
                 </tr>
@@ -167,9 +185,7 @@ export default function Sales() {
       {inv && returning && <ReturnDialog inv={inv} onClose={() => setReturning(false)} />}
       <Modal open={!!inv && !returning} onClose={() => setViewId(null)} title={inv ? `فاتورة ${inv.invoice_number}` : ''}
         footer={<>
-          {inv && inv.status === 'completed' && canSell && (inv.sales_payments.some((p) => p.method === 'credit')
-            ? <span className="me-auto text-xs text-muted">مرتجع فواتير الآجل غير متاح بعد</span>
-            : <Button className="me-auto" onClick={() => setReturning(true)}>إرجاع أصناف</Button>)}
+          {inv && inv.status === 'completed' && canSell && <Button className="me-auto" onClick={() => setReturning(true)}>إرجاع أصناف</Button>}
           <Button onClick={() => setViewId(null)}>إغلاق</Button>
         </>}>
         {inv && (
@@ -186,7 +202,7 @@ export default function Sales() {
             </ul>
             <div className="space-y-1 border-t border-line pt-2">
               <p className="flex justify-between"><span className="text-muted">الإجمالي قبل الخصم</span><span>{formatEGP(toMinor(inv.subtotal))}</span></p>
-              {toMinor(inv.discount) > 0 && <p className="flex justify-between"><span className="text-muted">الخصم</span><span>- {formatEGP(toMinor(inv.discount))}</span></p>}
+              {toMinor(inv.discount) > 0 && <p className="flex justify-between"><span className="text-muted">الخصم{toMinor(inv.offer_discount ?? '0') > 0 ? ` (منه عرض ${formatEGP(toMinor(inv.offer_discount ?? '0'))})` : ''}</span><span>- {formatEGP(toMinor(inv.discount))}</span></p>}
               <p className="flex justify-between text-base font-bold"><span>الصافي</span><span>{formatEGP(toMinor(inv.total))}</span></p>
             </div>
             {inv.sales_payments.length > 0 && (
@@ -214,6 +230,13 @@ function NewInvoice({ onClose, initial }: { onClose: () => void; initial: Held |
   const [pays, setPays] = useState<Pay[]>([{ method: 'cash', amount: '' }])
   const [customer, setCustomer] = useState({ name: initial?.customer_name ?? '', phone: initial?.customer_phone ?? '', notes: initial?.notes ?? '' })
   const [err, setErr] = useState<unknown>(null)
+  const [priceMode, setPriceMode] = useState<'retail' | 'wholesale'>('retail')
+  const [offerId, setOfferId] = useState('')
+  const [unc, setUnc] = useState<Unc[]>([])
+  const [uncForm, setUncForm] = useState<Unc | null>(null)
+  const [pinOpen, setPinOpen] = useState(false)
+  const tokenRef = useRef<string | null>(null)
+  const offers = useOffers(true)
   const [idem] = useState(() => crypto.randomUUID()) // one key per form: a double click can never sell twice
   const customers = useCustomers()
   const [custId, setCustId] = useState<string | null>(null)
@@ -223,11 +246,11 @@ function NewInvoice({ onClose, initial }: { onClose: () => void; initial: Held |
   const custResults = custFind.trim() ? (customers.data ?? []).filter((c) => c.is_active && matchCustomer(c, custFind)).slice(0, 6) : []
 
   const catalog = useMemo(() => {
-    const out: { id: string; label: string; price: number; barcode: string | null; sku: string; stock: number; tracked: boolean }[] = []
+    const out: { id: string; label: string; price: number; wholesale: number | null; cat: string | null; barcode: string | null; sku: string; stock: number; tracked: boolean }[] = []
     for (const p of products.data ?? []) {
       if (!p.is_active) continue
       for (const v of p.variants) {
-        if (v.is_active) out.push({ id: v.id, label: variantLabel(p, v), price: toMinor(v.price), barcode: v.barcode, sku: v.sku, stock: stock.data?.get(v.id) ?? 0, tracked: p.track_serial })
+        if (v.is_active) out.push({ id: v.id, label: variantLabel(p, v), price: toMinor(v.price), wholesale: v.wholesale_price ? toMinor(v.wholesale_price) : null, cat: p.category_id, barcode: v.barcode, sku: v.sku, stock: stock.data?.get(v.id) ?? 0, tracked: p.track_serial })
       }
     }
     return out
@@ -250,11 +273,23 @@ function NewInvoice({ onClose, initial }: { onClose: () => void; initial: Held |
     setFind('')
   }
 
-  const subtotal = lines.reduce((s, l) => s + (byId.get(l.variant_id)?.price ?? 0) * lq(l), 0)
+  const listOf = (c: { price: number; wholesale: number | null }) => (priceMode === 'wholesale' && c.wholesale !== null ? c.wholesale : c.price)
+  const unitOf = (l: Line) => {
+    const c = byId.get(l.variant_id)
+    if (!c) return 0
+    return l.price ? toMinorSafe(l.price) : listOf(c)
+  }
+  const uncTotal = unc.reduce((s, u) => s + toMinorSafe(u.price) * (parseInt(u.qty, 10) || 1), 0)
+  const subtotal = lines.reduce((s, l) => s + unitOf(l) * lq(l), 0) + uncTotal
+  const openOffers = (offers.data ?? []).filter((o) => offerOpen(o, cairoBusinessDate()))
+  const chosenOffer = openOffers.find((o) => o.id === offerId) ?? null
   const missingSerials = lines.some((l) => l.serials && l.serials.length === 0)
   let discMinor = 0
   try { discMinor = discount ? toMinor(discount) : 0 } catch { discMinor = -1 }
-  const total = subtotal - Math.max(discMinor, 0)
+  const offerDisc = chosenOffer
+    ? previewOffer(chosenOffer, lines.map((l) => ({ variant_id: l.variant_id, qty: lq(l), unit: unitOf(l), category_id: byId.get(l.variant_id)?.cat ?? null })), subtotal)
+    : 0
+  const total = subtotal - Math.max(discMinor, 0) - offerDisc
   const paid = pays.reduce((s, p) => { try { return s + (p.amount ? toMinor(p.amount) : 0) } catch { return s } }, 0)
   const remaining = total - paid
   const limitPct = settings.data?.max_discount_pct ?? 5
@@ -271,6 +306,10 @@ function NewInvoice({ onClose, initial }: { onClose: () => void; initial: Held |
     p_notes: customer.notes || null,
     p_lines: lines.map((l) => (l.serials ? { variant_id: l.variant_id, serials: l.serials } : { variant_id: l.variant_id, qty: l.qty })),
   })
+  const saleLines = () => [
+    ...lines.map((l) => ({ ...(l.serials ? { variant_id: l.variant_id, serials: l.serials } : { variant_id: l.variant_id, qty: l.qty }), ...(l.price ? { price: Number(fromMinor(toMinorSafe(l.price))) } : {}) })),
+    ...unc.map((u) => ({ uncoded: { name: u.name.trim(), qty: parseInt(u.qty, 10) || 1, price: Number(fromMinor(toMinorSafe(u.price))), cost: Number(fromMinor(toMinorSafe(u.cost))), reason: u.reason.trim() } })),
+  ]
   const hold = useMutation({
     mutationFn: async () => {
       if (lines.length === 0) throw new Error('basket is empty')
@@ -290,9 +329,14 @@ function NewInvoice({ onClose, initial }: { onClose: () => void; initial: Held |
       if (discMinor < 0) throw new Error('الخصم رقم صحيح بحد أقصى خانتين عشريتين.')
       if (remaining !== 0) throw new Error('payments must equal the invoice total')
       if (creditMinor > 0 && !cust) throw new Error('customer required for credit sale')
+      if (lines.some((l) => l.price && toMinorSafe(l.price) <= 0 && !hasRole('owner'))) throw new Error('سعر الوحدة غير صحيح.')
       const { data, error } = await supabase.rpc('create_sale_once', {
         p_idem: idem,
         ...payload(),
+        p_lines: saleLines(),
+        p_price_mode: priceMode,
+        p_offer: chosenOffer?.id ?? null,
+        p_override: tokenRef.current,
         p_payments: pays.filter((p) => p.amount).map((p) => ({
           method: p.method, amount: Number(fromMinor(toMinor(p.amount))),
           ...(p.method !== 'cash' && p.method !== 'credit' && p.account ? { account: p.account } : {}),
@@ -307,7 +351,11 @@ function NewInvoice({ onClose, initial }: { onClose: () => void; initial: Held |
       ;['sales', 'stock', 'approvals', 'products', 'cash', 'customers', 'drawers', 'accounts'].forEach((k) => qc.invalidateQueries({ queryKey: [k] }))
       onClose()
     },
-    onError: (e) => setErr(e),
+    onError: (e) => {
+      const msg = e instanceof Error ? e.message : String((e as { message?: string })?.message ?? '')
+      if (/override required|override invalid/i.test(msg)) { tokenRef.current = null; setPinOpen(true); return }
+      setErr(e)
+    },
   })
 
   return (
@@ -327,6 +375,13 @@ function NewInvoice({ onClose, initial }: { onClose: () => void; initial: Held |
           </p>
         )}
 
+        <div role="group" aria-label="نوع السعر" className="flex gap-2 text-sm">
+          {([['retail', 'سعر التجزئة'], ['wholesale', 'سعر الجملة']] as const).map(([k, l]) => (
+            <button key={k} type="button" aria-pressed={priceMode === k} onClick={() => setPriceMode(k)}
+              className={`rounded-lg border px-3 py-1.5 transition active:scale-[0.97] ${priceMode === k ? 'border-accent bg-accent text-accent-fg' : 'border-line bg-surface'}`}>{l}</button>
+          ))}
+          <Button small type="button" className="ms-auto" onClick={() => setUncForm({ name: '', qty: '1', price: '', cost: '', reason: '' })}>+ صنف بدون كود</Button>
+        </div>
         <div className="relative">
           <Field label="ابحث عن صنف (اسم، SKU، أو امسح الباركود)">
             <input className={inputCls} dir="auto" autoFocus value={find} onChange={(e) => setFind(e.target.value)}
@@ -338,7 +393,7 @@ function NewInvoice({ onClose, initial }: { onClose: () => void; initial: Held |
                 <li key={r.id}>
                   <button className="flex w-full items-center justify-between gap-3 px-3 py-2 text-start text-sm hover:bg-bg disabled:opacity-50" disabled={r.stock <= 0} onClick={() => add(r.id)}>
                     <span dir="auto">{r.label}</span>
-                    <span className="whitespace-nowrap text-xs text-muted">{formatEGP(r.price)} · متاح {r.stock}</span>
+                    <span className="whitespace-nowrap text-xs text-muted">{formatEGP(listOf(r))} · متاح {r.stock}</span>
                   </button>
                 </li>
               ))}
@@ -357,7 +412,9 @@ function NewInvoice({ onClose, initial }: { onClose: () => void; initial: Held |
                     <input aria-label="الكمية" className={`${inputCls} !w-20`} dir="ltr" inputMode="numeric" value={l.qty}
                       onChange={(e) => setLines((ls) => ls.map((x) => (x.variant_id === l.variant_id ? { ...x, qty: Math.max(1, parseInt(e.target.value || '1', 10) || 1) } : x)))} />
                   )}
-                  <span className="w-24 text-end font-semibold">{formatEGP((c?.price ?? 0) * lq(l))}</span>
+                  <input aria-label="سعر الوحدة" className={`${inputCls} !w-24`} dir="ltr" inputMode="decimal" value={l.price ?? ''} placeholder={c ? fromMinor(listOf(c)) : ''}
+                    onChange={(e) => setLines((ls) => ls.map((x) => (x.variant_id === l.variant_id ? { ...x, price: e.target.value || undefined } : x)))} />
+                  <span className="w-24 text-end font-semibold">{formatEGP(unitOf(l) * lq(l))}</span>
                   {c && lq(l) > c.stock && <Chip tone="danger">المتاح {c.stock}</Chip>}
                   <Button small variant="danger" onClick={() => setLines((ls) => ls.filter((x) => x.variant_id !== l.variant_id))}>إزالة</Button>
                   {l.serials && <SerialPicker variantId={l.variant_id} value={l.serials} onChange={(v) => setLines((ls) => ls.map((x) => (x.variant_id === l.variant_id ? { ...x, serials: v } : x)))} />}
@@ -365,6 +422,35 @@ function NewInvoice({ onClose, initial }: { onClose: () => void; initial: Held |
               )
             })}
           </ul>
+        )}
+
+        {unc.length > 0 && (
+          <ul className="space-y-2">
+            {unc.map((u, i) => (
+              <li key={i} className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-line p-3 text-sm">
+                <span className="min-w-0 flex-1" dir="auto">{u.name} <Chip tone="warn">بدون كود</Chip> <span className="text-muted">× {u.qty} · {u.reason}</span></span>
+                <span className="font-semibold">{formatEGP(toMinorSafe(u.price) * (parseInt(u.qty, 10) || 1))}</span>
+                <Button small variant="danger" onClick={() => setUnc(unc.filter((_, j) => j !== i))}>إزالة</Button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {uncForm && (
+          <div className="grid gap-2 rounded-xl border border-line bg-bg p-3 sm:grid-cols-5">
+            <Field label="الاسم" className="sm:col-span-2"><input className={inputCls} dir="auto" value={uncForm.name} onChange={(e) => setUncForm({ ...uncForm, name: e.target.value })} /></Field>
+            <Field label="الكمية"><input className={inputCls} dir="ltr" inputMode="numeric" value={uncForm.qty} onChange={(e) => setUncForm({ ...uncForm, qty: e.target.value })} /></Field>
+            <Field label="سعر البيع"><input className={inputCls} dir="ltr" inputMode="decimal" value={uncForm.price} onChange={(e) => setUncForm({ ...uncForm, price: e.target.value })} /></Field>
+            <Field label="التكلفة"><input className={inputCls} dir="ltr" inputMode="decimal" value={uncForm.cost} onChange={(e) => setUncForm({ ...uncForm, cost: e.target.value })} /></Field>
+            <Field label="سبب البيع بدون كود *" className="sm:col-span-4"><input className={inputCls} dir="auto" value={uncForm.reason} onChange={(e) => setUncForm({ ...uncForm, reason: e.target.value })} /></Field>
+            <div className="flex items-end gap-2">
+              <Button small variant="primary" type="button" onClick={() => {
+                if (!uncForm.name.trim() || !uncForm.reason.trim() || toMinorSafe(uncForm.price) <= 0) return setErr(new Error('الاسم والسبب وسعر البيع مطلوبين.'))
+                setUnc([...unc, uncForm]); setUncForm(null); setErr(null)
+              }}>إضافة</Button>
+              <Button small type="button" onClick={() => setUncForm(null)}>إلغاء</Button>
+            </div>
+            <p className="text-xs text-muted sm:col-span-5">لو قيمة الصنف 1,000 جنيه أو أكتر والكاشير بيبيع، بيحتاج رقم سري لمدير. البيع بيتسجل بالتكلفة والسبب للمراجعة.</p>
+          </div>
         )}
 
         <div className="rounded-xl border border-line p-3">
@@ -396,6 +482,13 @@ function NewInvoice({ onClose, initial }: { onClose: () => void; initial: Held |
         </div>
         {addingCust && <CustomerForm customer={null} onClose={() => setAddingCust(false)} onSaved={(id) => { setCustId(id); setCustFind('') }} />}
 
+        {openOffers.length > 0 && (
+          <Field label="عرض" hint={chosenOffer ? (offerDisc > 0 ? `خصم العرض - ${formatEGP(offerDisc)}` : 'العرض لا ينطبق على الأصناف الحالية') : undefined}>
+            <select className={inputCls} value={offerId} onChange={(e) => setOfferId(e.target.value)}>
+              <option value="">بدون عرض</option>{openOffers.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+          </Field>
+        )}
         <div className="grid gap-3 sm:grid-cols-3">
           <Field label="اسم العميل (اختياري)"><input className={inputCls} dir="auto" value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} /></Field>
           <Field label="هاتف العميل (اختياري)"><input className={inputCls} dir="ltr" inputMode="tel" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} /></Field>
@@ -437,10 +530,13 @@ function NewInvoice({ onClose, initial }: { onClose: () => void; initial: Held |
         <div className="space-y-1 rounded-xl bg-bg p-4 text-sm">
           <p className="flex justify-between"><span className="text-muted">قبل الخصم</span><span>{formatEGP(subtotal)}</span></p>
           {discMinor > 0 && <p className="flex justify-between"><span className="text-muted">الخصم</span><span>- {formatEGP(discMinor)}</span></p>}
+          {offerDisc > 0 && <p className="flex justify-between"><span className="text-muted">العرض: {chosenOffer?.name}</span><span>- {formatEGP(offerDisc)}</span></p>}
           <p className="flex justify-between text-lg font-bold"><span>الصافي</span><span>{formatEGP(Math.max(total, 0))}</span></p>
           <p className={`flex justify-between ${remaining === 0 ? 'text-ok' : 'text-warn'}`}><span>{remaining === 0 ? 'الدفع مكتمل' : remaining > 0 ? 'متبقي للدفع' : 'زيادة في الدفع'}</span><span>{remaining === 0 ? '✓' : formatEGP(Math.abs(remaining))}</span></p>
         </div>
       </div>
+      <ApproverPin open={pinOpen} onClose={() => setPinOpen(false)} reason="سعر أقل من المسموح أو صنف بدون كود في فاتورة بيع"
+        onToken={(t) => { tokenRef.current = t; setPinOpen(false); setErr(null); save.mutate() }} />
     </Modal>
   )
 }

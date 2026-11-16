@@ -5,8 +5,15 @@ import { useAuth } from '../auth/AuthProvider'
 import { CAN_EDIT_CATALOG, CAN_SEE_COST } from '../lib/roles'
 import { CONDITION_AR, useCategories, useCosts, useProducts, useStock, type Product } from '../lib/data'
 import { formatEGP, fromMinor, toMinor } from '../lib/money'
-import { Button, Card, Chip, ErrorText, Field, inputCls, Modal, PageHeader } from '../components/ui'
+import { Button, Card, Chip, ErrorText, Field, inputCls, Modal, PageHeader, translateError } from '../components/ui'
 import { State } from '../components/State'
+import CategoryManager from '../components/CategoryManager'
+import CatalogImport from '../components/CatalogImport'
+import {
+  TRACKING_AR, LABEL_SIZES, printLabels, printPriceList, useCategoryFields, useUnits,
+  type CategoryField, type LabelSize,
+} from '../lib/catalog'
+import { downloadCsv } from '../lib/repairs'
 
 type VRow = {
   id?: string
@@ -19,6 +26,8 @@ type VRow = {
   cost: string
   reorder_level: string
   warranty_months: string
+  wholesale_price: string
+  attributes: Record<string, string>
   is_active: boolean
 }
 type Form = {
@@ -28,19 +37,30 @@ type Form = {
   brand: string
   description: string
   image_url: string
-  track_serial: boolean
+  tracking_mode: 'none' | 'imei' | 'serial'
+  unit: string
   is_published: boolean
   is_active: boolean
   variants: VRow[]
 }
 
+function attrsToJson(fields: CategoryField[], a: Record<string, string>) {
+  const out: Record<string, string | number | boolean> = {}
+  for (const fld of fields) {
+    const v = a[fld.label]
+    if (v === undefined || v === '') continue
+    out[fld.label] = fld.kind === 'number' ? Number(v) : fld.kind === 'yesno' ? v === 'true' : v
+  }
+  return out
+}
+
 const emptyVariant = (): VRow => ({
   sku: '', barcode: '', color: '', storage: '', condition: 'new',
-  price: '', cost: '', reorder_level: '0', warranty_months: '0', is_active: true,
+  price: '', cost: '', reorder_level: '0', warranty_months: '0', wholesale_price: '', attributes: {}, is_active: true,
 })
 const emptyForm = (): Form => ({
   name: '', category_id: '', brand: '', description: '', image_url: '',
-  track_serial: false, is_published: false, is_active: true,
+  tracking_mode: 'none', unit: 'قطعة', is_published: false, is_active: true,
   variants: [emptyVariant()],
 })
 
@@ -55,6 +75,13 @@ export default function Products() {
   const cats = useCategories()
   const stock = useStock()
   const costs = useCosts(canCost)
+  const allFields = useCategoryFields()
+  const units = useUnits()
+  const fieldsOf = (cid: string) => (allFields.data ?? []).filter((x) => x.category_id === cid)
+  const [catMgr, setCatMgr] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [labelSize, setLabelSize] = useState<LabelSize>('50x28')
+  const [barcodeBusy, setBarcodeBusy] = useState<number | null>(null)
 
   const [search, setSearch] = useState('')
   const [cat, setCat] = useState('')
@@ -83,7 +110,8 @@ export default function Products() {
       brand: p.brand ?? '',
       description: p.description ?? '',
       image_url: p.image_url ?? '',
-      track_serial: p.track_serial,
+      tracking_mode: p.tracking_mode,
+      unit: p.unit,
       is_published: p.is_published,
       is_active: p.is_active,
       variants: p.variants.map((v) => ({
@@ -97,6 +125,8 @@ export default function Products() {
         cost: costs.data?.get(v.id) ?? '',
         reorder_level: String(v.reorder_level),
         warranty_months: String(v.warranty_months ?? 0),
+        wholesale_price: v.wholesale_price ?? '',
+        attributes: Object.fromEntries(Object.entries(v.attributes ?? {}).map(([k, x]) => [k, String(x)])),
         is_active: v.is_active,
       })),
     })
@@ -112,7 +142,10 @@ export default function Products() {
         if (!v.sku.trim()) throw new Error('رمز الصنف (SKU) مطلوب لكل متغير.')
         if (skus.has(v.sku.trim().toLowerCase())) throw new Error('رمز الصنف مكرر داخل نفس المنتج.')
         skus.add(v.sku.trim().toLowerCase())
-        try { toMinor(v.price || '0'); if (v.cost) toMinor(v.cost) } catch { throw new Error('السعر والتكلفة أرقام بحد أقصى خانتين عشريتين.') }
+        try { toMinor(v.price || '0'); if (v.cost) toMinor(v.cost); if (v.wholesale_price) toMinor(v.wholesale_price) } catch { throw new Error('السعر والتكلفة أرقام بحد أقصى خانتين عشريتين.') }
+      }
+      for (const fld of fieldsOf(f.category_id)) {
+        if (fld.required) for (const v of f.variants) if ((v.attributes[fld.label] ?? '') === '') throw new Error(`الحقل «${fld.label}» مطلوب لكل متغير.`)
       }
       const base = {
         name: f.name.trim(),
@@ -120,7 +153,8 @@ export default function Products() {
         brand: f.brand.trim() || null,
         description: f.description.trim() || null,
         image_url: f.image_url.trim() || null,
-        track_serial: f.track_serial,
+        tracking_mode: f.tracking_mode,
+        unit: f.tracking_mode === 'none' ? f.unit : 'قطعة',
         is_published: f.is_published,
         is_active: f.is_active,
       }
@@ -144,6 +178,8 @@ export default function Products() {
           price: fromMinor(toMinor(v.price || '0')),
           reorder_level: Math.max(0, parseInt(v.reorder_level || '0', 10) || 0),
           warranty_months: Math.max(0, parseInt(v.warranty_months || '0', 10) || 0),
+          wholesale_price: v.wholesale_price ? fromMinor(toMinor(v.wholesale_price)) : null,
+          attributes: attrsToJson(fieldsOf(f.category_id), v.attributes),
           is_active: v.is_active,
         }
         let vid = v.id
@@ -183,6 +219,28 @@ export default function Products() {
     onError: (e) => setFormError(e instanceof Error ? e.message : 'تعذّر الحذف'),
   })
 
+  function exportCsv() {
+    downloadCsv('products.csv', ['اسم المنتج', 'القسم', 'العلامة', 'SKU', 'الباركود', 'اللون', 'السعة', 'الحالة', 'سعر البيع', 'سعر الجملة', ...(canCost ? ['التكلفة'] : []), 'حد إعادة الطلب', 'الضمان (شهور)', 'المتاح'],
+      rows.flatMap((p) => p.variants.map((v) => [p.name, p.categories?.name ?? '', p.brand ?? '', v.sku, v.barcode ?? '', v.color ?? '', v.storage ?? '', CONDITION_AR[v.condition], v.price, v.wholesale_price ?? '',
+        ...(canCost ? [costs.data?.get(v.id) ?? ''] : []), v.reorder_level, v.warranty_months, stock.data?.get(v.id) ?? 0])))
+  }
+  function labelsForSelection() {
+    const items = rows.flatMap((p) => p.variants.filter((v) => v.barcode && v.is_active).map((v) => ({
+      name: p.name, detail: [v.color, v.storage].filter(Boolean).join(' / '), price: formatEGP(toMinor(v.price)), barcode: v.barcode as string,
+      copies: Math.max(1, Math.min(stock.data?.get(v.id) ?? 1, 20)),
+    })))
+    if (items.length === 0) return alert('لا توجد أصناف بباركود في القائمة الحالية. اضغط «توليد» في المنتج لإنشاء باركود.')
+    if (items.length > 300 && !confirm(`سيتم طباعة ${items.length} نوع. متأكد؟`)) return
+    printLabels(items, labelSize)
+  }
+  async function genBarcode(i: number) {
+    setBarcodeBusy(i); setFormError(null)
+    const { data, error } = await supabase.rpc('next_barcode')
+    setBarcodeBusy(null)
+    if (error) return setFormError(translateError(error.message))
+    setV(i, { barcode: String(data) })
+  }
+
   const set = (patch: Partial<Form>) => setEditing((f) => (f ? { ...f, ...patch } : f))
   const setV = (i: number, patch: Partial<VRow>) =>
     setEditing((f) => (f ? { ...f, variants: f.variants.map((v, j) => (j === i ? { ...v, ...patch } : v)) } : f))
@@ -192,7 +250,13 @@ export default function Products() {
       <PageHeader
         title="المنتجات"
         subtitle="الأصناف والمتغيرات (اللون والسعة والحالة) والأسعار."
-        actions={canEdit && <Button variant="primary" onClick={() => open()}>+ منتج جديد</Button>}
+        actions={canEdit && (
+          <>
+            <Button onClick={() => setCatMgr(true)}>الأقسام والحقول</Button>
+            {hasRole('owner', 'manager') && <Button onClick={() => setImporting(true)}>استيراد CSV</Button>}
+            <Button variant="primary" onClick={() => open()}>+ منتج جديد</Button>
+          </>
+        )}
       />
 
       <div className="mb-4 flex flex-wrap gap-2">
@@ -207,6 +271,14 @@ export default function Products() {
           <option value="">كل الأقسام</option>
           {cats.data?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
+        <Button onClick={exportCsv}>تصدير CSV</Button>
+        <Button onClick={() => printPriceList(rows.flatMap((p) => p.variants.filter((v) => v.is_active).map((v) => ({ name: p.name, detail: [v.color, v.storage].filter(Boolean).join(' / '), sku: v.sku, price: formatEGP(toMinor(v.price)) }))))}>قائمة الأسعار</Button>
+        <span className="flex items-center gap-1">
+          <select className={`${inputCls} !w-28`} aria-label="مقاس الملصق" value={labelSize} onChange={(e) => setLabelSize(e.target.value as LabelSize)}>
+            {Object.keys(LABEL_SIZES).map((k) => <option key={k} value={k}>{k} مم</option>)}
+          </select>
+          <Button onClick={labelsForSelection}>طباعة ملصقات</Button>
+        </span>
       </div>
 
       {products.isLoading && <State kind="loading" />}
@@ -306,6 +378,16 @@ export default function Products() {
                   {cats.data?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </Field>
+              <Field label="التتبع" hint="IMEI: 15 رقم بفحص صحة الرقم. السيريال الداخلي: أي كود فريد.">
+                <select className={inputCls} value={editing.tracking_mode} onChange={(e) => set({ tracking_mode: e.target.value as Form['tracking_mode'] })}>
+                  {Object.entries(TRACKING_AR).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                </select>
+              </Field>
+              <Field label="وحدة القياس" hint={editing.tracking_mode !== 'none' ? 'المنتجات المتتبعة تُعدّ بالقطعة دائمًا' : undefined}>
+                <select className={inputCls} value={editing.tracking_mode === 'none' ? editing.unit : 'قطعة'} disabled={editing.tracking_mode !== 'none'} onChange={(e) => set({ unit: e.target.value })}>
+                  {(units.data ?? ['قطعة']).map((u) => <option key={u} value={u}>{u}</option>)}
+                </select>
+              </Field>
               <Field label="العلامة التجارية">
                 <input className={inputCls} value={editing.brand} onChange={(e) => set({ brand: e.target.value })} dir="auto" />
               </Field>
@@ -318,7 +400,6 @@ export default function Products() {
             </div>
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
               {([
-                ['track_serial', 'تتبع بالسيريال/IMEI'],
                 ['is_published', 'منشور على الموقع'],
                 ['is_active', 'نشط'],
               ] as const).map(([k, l]) => (
@@ -337,7 +418,12 @@ export default function Products() {
                 {editing.variants.map((v, i) => (
                   <div key={i} className="grid gap-2 rounded-xl border border-line p-3 sm:grid-cols-4">
                     <Field label="SKU *"><input className={inputCls} dir="ltr" value={v.sku} onChange={(e) => setV(i, { sku: e.target.value })} /></Field>
-                    <Field label="الباركود"><input className={inputCls} dir="ltr" value={v.barcode} onChange={(e) => setV(i, { barcode: e.target.value })} /></Field>
+                    <Field label="الباركود">
+                      <div className="flex gap-1.5">
+                        <input className={inputCls} dir="ltr" value={v.barcode} onChange={(e) => setV(i, { barcode: e.target.value })} />
+                        <Button small type="button" disabled={barcodeBusy === i || !!v.barcode} onClick={() => void genBarcode(i)}>{barcodeBusy === i ? '…' : 'توليد'}</Button>
+                      </div>
+                    </Field>
                     <Field label="اللون"><input className={inputCls} dir="auto" value={v.color} onChange={(e) => setV(i, { color: e.target.value })} /></Field>
                     <Field label="السعة / المقاس"><input className={inputCls} dir="auto" value={v.storage} onChange={(e) => setV(i, { storage: e.target.value })} /></Field>
                     <Field label="الحالة">
@@ -346,6 +432,7 @@ export default function Products() {
                       </select>
                     </Field>
                     <Field label="سعر البيع *"><input className={inputCls} inputMode="decimal" dir="ltr" value={v.price} onChange={(e) => setV(i, { price: e.target.value })} /></Field>
+                    <Field label="سعر الجملة"><input className={inputCls} inputMode="decimal" dir="ltr" value={v.wholesale_price} onChange={(e) => setV(i, { wholesale_price: e.target.value })} /></Field>
                     {canCost && (
                       <Field label="التكلفة" hint={canEditCost ? undefined : 'للعرض فقط'}>
                         <input className={inputCls} inputMode="decimal" dir="ltr" value={v.cost} disabled={!canEditCost} onChange={(e) => setV(i, { cost: e.target.value })} />
@@ -353,6 +440,24 @@ export default function Products() {
                     )}
                     <Field label="الضمان (شهور)"><input className={inputCls} inputMode="numeric" dir="ltr" value={v.warranty_months} onChange={(e) => setV(i, { warranty_months: e.target.value })} /></Field>
                     <Field label="حد إعادة الطلب"><input className={inputCls} inputMode="numeric" dir="ltr" value={v.reorder_level} onChange={(e) => setV(i, { reorder_level: e.target.value })} /></Field>
+                    {fieldsOf(editing.category_id).map((fld) => {
+                      const val = v.attributes[fld.label] ?? ''
+                      const put = (x: string) => setV(i, { attributes: { ...v.attributes, [fld.label]: x } })
+                      const label = `${fld.label}${fld.required ? ' *' : ''}`
+                      return (
+                        <Field key={fld.id} label={label} hint={fld.internal ? 'داخلي' : undefined} className={fld.kind === 'long' ? 'sm:col-span-4' : undefined}>
+                          {fld.kind === 'list' ? (
+                            <select className={inputCls} value={val} onChange={(e) => put(e.target.value)}><option value="">—</option>{fld.options?.map((o) => <option key={o} value={o}>{o}</option>)}</select>
+                          ) : fld.kind === 'yesno' ? (
+                            <select className={inputCls} value={val} onChange={(e) => put(e.target.value)}><option value="">—</option><option value="true">نعم</option><option value="false">لا</option></select>
+                          ) : fld.kind === 'long' ? (
+                            <textarea className={inputCls} rows={2} dir="auto" value={val} onChange={(e) => put(e.target.value)} />
+                          ) : (
+                            <input className={inputCls} dir={fld.kind === 'number' ? 'ltr' : 'auto'} inputMode={fld.kind === 'number' ? 'decimal' : undefined} value={val} onChange={(e) => put(e.target.value)} />
+                          )}
+                        </Field>
+                      )
+                    })}
                     <div className="flex items-end justify-between gap-2 sm:col-span-4">
                       <label className="flex items-center gap-2 text-sm">
                         <input type="checkbox" checked={v.is_active} onChange={(e) => setV(i, { is_active: e.target.checked })} /> نشط
@@ -368,6 +473,8 @@ export default function Products() {
           </div>
         )}
       </Modal>
+      <CategoryManager open={catMgr} onClose={() => setCatMgr(false)} />
+      <CatalogImport open={importing} onClose={() => setImporting(false)} />
     </div>
   )
 }

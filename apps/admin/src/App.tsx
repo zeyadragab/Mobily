@@ -25,7 +25,12 @@ const Approvals = lazy(() => import('./pages/Approvals'))
 const AuditLog = lazy(() => import('./pages/AuditLog'))
 const Customers = lazy(() => import('./pages/Customers'))
 const Accounts = lazy(() => import('./pages/Accounts'))
+const Supply = lazy(() => import('./pages/Supply'))
+const Offers = lazy(() => import('./pages/Offers'))
+const Returns = lazy(() => import('./pages/Returns'))
 const Security = lazy(() => import('./pages/Security'))
+const WalletOps = lazy(() => import('./pages/WalletOps'))
+const Bills = lazy(() => import('./pages/Bills'))
 
 const PAGES: Record<string, React.ReactNode> = {
   '/supplier-accounts': <SupplierAccounts />,
@@ -46,6 +51,11 @@ const PAGES: Record<string, React.ReactNode> = {
   '/security': <Security />,
   '/customers': <Customers />,
   '/accounts': <Accounts />,
+  '/supply': <Supply />,
+  '/offers': <Offers />,
+  '/returns': <Returns />,
+  '/wallet-ops': <WalletOps />,
+  '/bills': <Bills />,
 }
 
 export default function App() {
