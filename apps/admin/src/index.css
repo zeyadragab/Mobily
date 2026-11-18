@@ -286,3 +286,34 @@ dialog::backdrop { background: var(--scrim); backdrop-filter: blur(6px) saturate
   .bubble, .drift { animation: none !important; }
   .par { transition: none; }
 }
+
+/* ---------- Wallpapers (data-wall on <html>). Ribbon is the drawn SVG scene; the others are colour fields. ---------- */
+.wall { display: none; }
+:root[data-wall="ribbon"] .wall { display: block; }
+:root[data-wall="ribbon"] { --wall: #dfe4ff; }
+:root[data-theme="dark"][data-wall="ribbon"] { --wall: #120d3a; }
+
+/* Neutral dark glass for every wall except ribbon (ribbon keeps its violet tint) */
+:root[data-theme="dark"]:not([data-wall="ribbon"]) { --glass: rgb(30 30 40 / 0.46); --glass-thick: rgb(28 28 34 / 0.9); --sheen: rgb(255 255 255 / 0.07); --glint: rgb(255 255 255 / 0.12); }
+
+:root[data-theme="dark"][data-wall="tide"] { --bg: #04112a; --wall: radial-gradient(60% 50% at 15% 8%, rgb(29 85 220 / 0.55), transparent 70%), radial-gradient(50% 45% at 90% 20%, rgb(11 169 189 / 0.4), transparent 70%), radial-gradient(60% 60% at 70% 95%, rgb(76 51 216 / 0.45), transparent 70%), #04112a; }
+:root[data-theme="light"][data-wall="tide"], :root:not([data-theme="dark"])[data-wall="tide"] { --bg: #cfe6ff; --wall: radial-gradient(60% 50% at 15% 8%, rgb(90 169 255 / 0.7), transparent 70%), radial-gradient(50% 45% at 90% 20%, rgb(63 214 224 / 0.55), transparent 70%), radial-gradient(60% 60% at 70% 95%, rgb(122 98 255 / 0.5), transparent 70%), #cfe6ff; }
+
+:root[data-theme="dark"][data-wall="ember"] { --bg: #200a04; --wall: radial-gradient(60% 50% at 15% 8%, rgb(196 80 26 / 0.55), transparent 70%), radial-gradient(50% 45% at 90% 25%, rgb(184 48 78 / 0.45), transparent 70%), radial-gradient(60% 60% at 70% 95%, rgb(201 138 18 / 0.35), transparent 70%), #200a04; }
+:root:not([data-theme="dark"])[data-wall="ember"] { --bg: #ffe7d0; --wall: radial-gradient(60% 50% at 15% 8%, rgb(255 154 90 / 0.7), transparent 70%), radial-gradient(50% 45% at 90% 25%, rgb(255 111 142 / 0.5), transparent 70%), radial-gradient(60% 60% at 70% 95%, rgb(255 194 61 / 0.5), transparent 70%), #ffe7d0; }
+
+:root[data-theme="dark"][data-wall="grove"] { --bg: #04170e; --wall: radial-gradient(60% 50% at 15% 8%, rgb(28 143 85 / 0.5), transparent 70%), radial-gradient(50% 45% at 90% 25%, rgb(19 138 134 / 0.4), transparent 70%), radial-gradient(60% 60% at 70% 95%, rgb(94 158 31 / 0.35), transparent 70%), #04170e; }
+:root:not([data-theme="dark"])[data-wall="grove"] { --bg: #ddf7e5; --wall: radial-gradient(60% 50% at 15% 8%, rgb(79 209 138 / 0.65), transparent 70%), radial-gradient(50% 45% at 90% 25%, rgb(47 184 176 / 0.5), transparent 70%), radial-gradient(60% 60% at 70% 95%, rgb(166 227 90 / 0.5), transparent 70%), #ddf7e5; }
+
+:root[data-theme="dark"][data-wall="aurora"] { --bg: #090b1c; --wall: radial-gradient(60% 50% at 20% 10%, rgb(43 58 140 / 0.7), transparent 70%), radial-gradient(50% 45% at 85% 30%, rgb(52 70 158 / 0.5), transparent 70%), radial-gradient(60% 60% at 60% 95%, rgb(28 39 102 / 0.7), transparent 70%), #090b1c; }
+:root:not([data-theme="dark"])[data-wall="aurora"] { --bg: #e6eaff; --wall: radial-gradient(60% 50% at 20% 10%, rgb(180 192 255 / 0.9), transparent 70%), radial-gradient(50% 45% at 85% 30%, rgb(141 158 245 / 0.7), transparent 70%), radial-gradient(60% 60% at 60% 95%, rgb(113 134 238 / 0.6), transparent 70%), #e6eaff; }
+
+:root[data-theme="dark"][data-wall="bloom"] { --bg: #130a2b; --wall: radial-gradient(60% 50% at 15% 10%, rgb(44 70 200 / 0.55), transparent 70%), radial-gradient(50% 45% at 90% 20%, rgb(194 48 108 / 0.5), transparent 70%), radial-gradient(60% 60% at 70% 95%, rgb(196 80 31 / 0.4), transparent 70%), #130a2b; }
+:root:not([data-theme="dark"])[data-wall="bloom"] { --bg: #ffdbe9; --wall: radial-gradient(60% 50% at 15% 10%, rgb(126 164 255 / 0.7), transparent 70%), radial-gradient(50% 45% at 90% 20%, rgb(255 126 179 / 0.6), transparent 70%), radial-gradient(60% 60% at 70% 95%, rgb(255 199 107 / 0.5), transparent 70%), #ffdbe9; }
+
+:root[data-theme="dark"][data-wall="ash"] { --bg: #232428; --wall: #232428; }
+:root:not([data-theme="dark"])[data-wall="ash"] { --bg: #e4e4e7; --wall: #e4e4e7; }
+:root[data-theme="dark"][data-wall="sand"] { --bg: #3a2a1e; --wall: #3a2a1e; }
+:root:not([data-theme="dark"])[data-wall="sand"] { --bg: #f6e4d2; --wall: #f6e4d2; }
+:root[data-theme="dark"][data-wall="sage"] { --bg: #1f2c23; --wall: #1f2c23; }
+:root:not([data-theme="dark"])[data-wall="sage"] { --bg: #dde9dc; --wall: #dde9dc; }

@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
 import { useOpenSession } from '../lib/data'
 import { shiftLabel } from '../lib/drawers'
-import { ACCENTS, useTheme } from '../lib/theme'
+import { ACCENTS, WALLS, useTheme } from '../lib/theme'
 
 type Panel = 'bell' | 'tasks' | 'theme' | 'calc' | null
 
@@ -286,6 +286,17 @@ export default function TopBar() {
                   <span>{theme.solid ? 'زجاج: متوقف (أداء)' : 'زجاج: مفعّل'}</span>
                   <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${theme.solid ? 'bg-muted' : 'bg-ok'}`} />
                 </button>
+                <div>
+                  <p className="mb-1.5 text-xs text-muted">الخلفية</p>
+                  <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="الخلفية">
+                    {WALLS.map((w) => (
+                      <button key={w.key} type="button" role="radio" aria-checked={theme.wall === w.key} aria-label={w.label} title={w.label}
+                        onClick={() => theme.setWall(w.key)}
+                        className={`h-10 rounded-xl border-2 text-[11px] font-semibold text-white transition active:scale-95 [text-shadow:0_1px_3px_rgb(0_0_0/0.6)] ${theme.wall === w.key ? 'border-fg scale-105' : 'border-transparent'}`}
+                        style={{ background: w.css }}>{w.label}</button>
+                    ))}
+                  </div>
+                </div>
                 <div>
                   <p className="mb-1.5 text-xs text-muted">لون النظام</p>
                   <div className="flex gap-2" role="radiogroup" aria-label="لون النظام">
