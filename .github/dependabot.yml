@@ -4,7 +4,3 @@ updates:
     directory: /apps/admin
     schedule: { interval: weekly }
     open-pull-requests-limit: 5
-  - package-ecosystem: npm
-    directory: /apps/storefront
-    schedule: { interval: weekly }
-    open-pull-requests-limit: 5
