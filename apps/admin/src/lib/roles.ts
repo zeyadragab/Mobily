@@ -47,7 +47,7 @@ export const NAV: { to: string; label: string; icon: string; roles: AppRole[]; g
   { to: '/attendance', label: 'الحضور والانصراف', icon: 'check', roles: [...ALL, 'technician'], group: 'الإدارة' },
   { to: '/team', label: 'إدارة الفريق', icon: 'users', roles: ['owner', 'manager'], group: 'الإدارة' },
   { to: '/employee-accounts', label: 'حسابات الموظفين', icon: 'users', roles: ['owner', 'manager', 'accountant'], group: 'الإدارة' },
-  { to: '/reports', label: 'التقارير', icon: 'stock', roles: ['owner', 'manager'], group: 'الإدارة', soon: 'المرحلة 11' },
+  { to: '/reports', label: 'التقارير', icon: 'stock', roles: ['owner', 'manager', 'accountant'], group: 'الإدارة' },
   { to: '/campaigns', label: 'حملات واتساب', icon: 'globe', roles: ['owner', 'manager'], group: 'الإدارة', soon: 'المرحلة 13' },
   { to: '/settings', label: 'الإعدادات', icon: 'shield', roles: ['owner', 'manager'], group: 'الإدارة', soon: 'المرحلة 13' },
 ]
