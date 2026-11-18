@@ -34,6 +34,10 @@ const Bills = lazy(() => import('./pages/Bills'))
 const Installments = lazy(() => import('./pages/Installments'))
 const InOut = lazy(() => import('./pages/InOut'))
 const TradeIn = lazy(() => import('./pages/TradeIn'))
+const EmployeeAccounts = lazy(() => import('./pages/EmployeeAccounts'))
+const Attendance = lazy(() => import('./pages/Attendance'))
+const Team = lazy(() => import('./pages/Team'))
+const MobileTax = lazy(() => import('./pages/MobileTax'))
 
 const PAGES: Record<string, React.ReactNode> = {
   '/supplier-accounts': <SupplierAccounts />,
@@ -62,10 +66,14 @@ const PAGES: Record<string, React.ReactNode> = {
   '/installments': <Installments />,
   '/inout': <InOut />,
   '/trade-in': <TradeIn />,
+  '/employee-accounts': <EmployeeAccounts />,
+  '/attendance': <Attendance />,
+  '/team': <Team />,
+  '/mobile-tax': <MobileTax />,
 }
 
 export default function App() {
-  const { session, loading, roles } = useAuth()
+  const { session, loading, roles, canPage } = useAuth()
 
   if (loading) return <State kind="loading" />
   if (!session) {
@@ -93,7 +101,7 @@ export default function App() {
             <Route
               key={n.to}
               path={n.to.slice(1)}
-              element={<RequireRole roles={n.roles}>{PAGES[n.to]}</RequireRole>}
+              element={canPage(n.to) ? <RequireRole roles={n.roles}>{PAGES[n.to]}</RequireRole> : <State kind="error" title="غير مصرح" text="المالك قفل هذه الصفحة على حسابك." />}
             />
           ))}
           <Route path="*" element={<Navigate to="/" replace />} />

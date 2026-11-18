@@ -5,11 +5,12 @@ import { NAV, ROLE_LABEL } from '../lib/roles'
 import { Icon } from './ui'
 import { useTheme } from '../lib/theme'
 import TopBar, { AlertBanner } from './TopBar'
+import IdleLock from './IdleLock'
 
 const GLASS = 'bg-surface/70 backdrop-blur-2xl backdrop-saturate-150'
 
 export default function Shell() {
-  const { roles, fullName, hasRole, signOut } = useAuth()
+  const { roles, fullName, hasRole, canPage, signOut } = useAuth()
   const { pathname } = useLocation()
   const [open, setOpen] = useState(false)
   const { dark, toggle: toggleTheme } = useTheme()
@@ -20,7 +21,7 @@ export default function Shell() {
     return () => window.removeEventListener('keydown', onKey)
   }, [open])
 
-  const items = NAV.filter((n) => hasRole(...n.roles))
+  const items = NAV.filter((n) => hasRole(...n.roles) && canPage(n.to))
   const groups = [...new Set(items.map((i) => i.group))]
   const current = items.find((n) => (n.to === '/' ? pathname === '/' : pathname.startsWith(n.to)))
 
@@ -99,6 +100,7 @@ export default function Shell() {
 
   return (
     <div className="min-h-screen lg:flex">
+      <IdleLock />
       <aside className={`sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-e border-line/70 lg:flex ${GLASS}`}>
         {brand}
         {nav}

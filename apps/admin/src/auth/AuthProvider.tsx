@@ -8,6 +8,8 @@ type AuthState = {
   session: Session | null
   roles: AppRole[]
   fullName: string
+  /** false when the owner switched this page off for the signed-in user (UI only; the database enforces it too) */
+  canPage: (path: string) => boolean
   hasRole: (...r: AppRole[]) => boolean
   signOut: () => Promise<void>
 }
@@ -18,6 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [roles, setRoles] = useState<AppRole[]>([])
   const [fullName, setFullName] = useState('')
+  const [denied, setDenied] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -29,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s)
       if (!s) {
         setRoles([])
+        setDenied(new Set())
         setFullName('')
         setLoading(false)
       }
@@ -44,8 +48,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     Promise.all([
       supabase.from('user_roles').select('role').eq('user_id', uid),
       supabase.from('profiles').select('full_name').eq('id', uid).single(),
-    ]).then(([r, p]) => {
+      supabase.rpc('my_page_permissions'),
+    ]).then(([r, p, pp]) => {
       if (cancelled) return
+      setDenied(new Set(((pp.data ?? []) as { page: string; allowed: boolean }[]).filter((x) => !x.allowed).map((x) => x.page)))
       setRoles((r.data ?? []).map((x) => x.role as AppRole))
       setFullName(p.data?.full_name ?? '')
       setLoading(false)
@@ -80,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session,
     roles,
     fullName: fullName || session?.user.email || '',
+    canPage: (path) => !denied.has(path),
     hasRole: (...r) => r.some((x) => roles.includes(x)),
     signOut: async () => {
       await supabase.auth.signOut()
