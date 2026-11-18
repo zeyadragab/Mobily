@@ -44,7 +44,7 @@ export default function Team() {
         <tbody>{rows.map((t) => {
           const d = denied(t.id).size
           return <tr key={t.id} className="border-b border-line last:border-0">
-            <td className="p-3"><p dir="auto" className="font-medium">{t.full_name}{!t.is_active && <span className="ms-2"><Chip>موقوف</Chip></span>}</p>{t.email && <bdi className="text-xs text-muted">{t.email}</bdi>}</td>
+            <td className="p-3"><p dir="auto" className="font-medium">{t.full_name || t.email || 'بدون اسم'}{!t.is_active && <span className="ms-2"><Chip>موقوف</Chip></span>}</p>{t.email && <bdi className="text-xs text-muted">{t.email}</bdi>}</td>
             <td className="p-3" dir="auto">{t.job_title ?? '—'}</td>
             <td className="p-3"><div className="flex flex-wrap gap-1">{t.roles.length ? t.roles.map((r) => <Chip key={r} tone={r === 'owner' ? 'info' : 'neutral'}>{ROLE_LABEL[r as AppRole] ?? r}</Chip>) : <Chip tone="warn">بدون دور</Chip>}</div></td>
             <td className="p-3">{d ? <Chip tone="warn">{d}</Chip> : '—'}</td>
