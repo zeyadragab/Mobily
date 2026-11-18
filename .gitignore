@@ -22,3 +22,6 @@ Thumbs.db
 # local assistant state
 .claude/settings.local.json
 graphify-out/
+
+# Storefront is a later phase: kept locally, not published yet
+apps/storefront/
