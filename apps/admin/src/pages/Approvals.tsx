@@ -83,7 +83,7 @@ export default function Approvals() {
               aria-pressed={filter === f}
               onClick={() => setFilter(f)}
               className={`rounded-lg px-3 py-2 text-sm ${
-                filter === f ? 'bg-accent text-accent-fg' : 'border border-line'
+                filter === f ? 'btn-gel' : 'border border-line'
               }`}
             >
               {f === 'submitted' ? 'المعلّقة' : 'الكل'}

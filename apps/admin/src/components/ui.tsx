@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
 
 export const inputCls =
-  'w-full rounded-[10px] border border-line bg-surface px-3 py-2.5 text-sm shadow-soft outline-none disabled:opacity-50'
+  'w-full rounded-[14px] border border-line bg-surface px-3 py-2.5 text-sm outline-none disabled:opacity-50'
 
 export function Field({
   label,
@@ -29,14 +29,14 @@ type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 }
 export function Button({ variant = 'ghost', small, className = '', ...p }: BtnProps) {
   const v = {
-    primary: 'bg-accent text-accent-fg shadow-soft hover:brightness-110',
-    ghost: 'border border-line bg-surface shadow-soft hover:bg-bg',
-    danger: 'border border-danger/40 bg-surface text-danger hover:bg-danger/10',
+    primary: 'btn-gel',
+    ghost: 'btn-glass',
+    danger: 'btn-glass text-danger hover:bg-danger/10',
   }[variant]
   return (
     <button
       {...p}
-      className={`inline-flex items-center justify-center gap-2 rounded-[10px] font-medium transition duration-150 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 ${
+      className={`inline-flex items-center justify-center gap-2 rounded-full font-medium transition duration-150 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 ${
         small ? 'px-3 py-1.5 text-xs' : 'px-4 py-2.5 text-sm'
       } ${v} ${className}`}
     />
@@ -70,7 +70,7 @@ export function PageHeader({
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-[1.7rem] font-bold leading-tight tracking-tight">{title}</h1>
+        <h1 className="text-[1.9rem] font-bold leading-tight tracking-tight [text-shadow:0_1px_14px_rgb(0_0_30/0.25)]">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
       </div>
       <div className="flex flex-wrap gap-2">{actions}</div>
@@ -79,7 +79,7 @@ export function PageHeader({
 }
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-2xl border border-line/70 bg-surface shadow-soft ${className}`}>{children}</div>
+  return <div className={`glass gcard rounded-[26px] ${className}`}>{children}</div>
 }
 
 export function Modal({
@@ -109,7 +109,7 @@ export function Modal({
       ref={ref}
       onClose={onClose}
       onClick={(e) => e.target === ref.current && onClose()}
-      className={`m-auto w-[calc(100%-1.5rem)] overflow-hidden rounded-[18px] border border-line/60 bg-surface p-0 text-fg ${
+      className={`m-auto w-[calc(100%-1.5rem)] overflow-hidden rounded-[28px] p-0 text-fg ${
         wide ? 'max-w-4xl' : 'max-w-lg'
       }`}
     >

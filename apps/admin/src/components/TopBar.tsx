@@ -6,12 +6,11 @@ import { useAuth } from '../auth/AuthProvider'
 import { useOpenSession } from '../lib/data'
 import { shiftLabel } from '../lib/drawers'
 import { ACCENTS, useTheme } from '../lib/theme'
-import { ROLE_LABEL } from '../lib/roles'
 
 type Panel = 'bell' | 'tasks' | 'theme' | 'calc' | null
 
-const BTN = 'relative flex h-9 w-9 items-center justify-center rounded-full border border-line bg-surface/80 text-fg/80 shadow-soft transition hover:bg-bg hover:text-fg active:scale-95'
-const POP = 'absolute end-0 top-full z-40 mt-2 animate-rise rounded-2xl border border-line bg-surface p-3 shadow-window'
+const BTN = 'relative flex h-9 w-9 items-center justify-center rounded-full text-fg/80 transition hover:bg-fill-2 hover:text-fg active:scale-95'
+const POP = 'glass glass--thick absolute end-0 top-full z-40 mt-3 animate-rise rounded-3xl p-3'
 
 function Svg({ d, className = 'h-[18px] w-[18px]' }: { d: string; className?: string }) {
   return (
@@ -155,7 +154,7 @@ function Calculator() {
       <div className="grid grid-cols-4 gap-1.5">
         {keys.map(([k, fn, cls]) => (
           <button key={k} type="button" onClick={fn}
-            className={`h-10 rounded-[10px] border border-line bg-surface text-sm font-semibold shadow-soft transition hover:bg-bg active:scale-95 ${cls ?? ''}`}>{k}</button>
+            className={`h-10 rounded-full border border-line bg-surface text-sm font-semibold transition hover:bg-fill-2 active:scale-95 ${cls ?? ''}`}>{k}</button>
         ))}
       </div>
     </div>
@@ -185,7 +184,7 @@ export function AlertBanner() {
 }
 
 export default function TopBar() {
-  const { fullName, roles, hasRole } = useAuth()
+  const { hasRole } = useAuth()
   const qc = useQueryClient()
   const theme = useTheme()
   const online = useOnline()
@@ -210,21 +209,16 @@ export default function TopBar() {
   const open = !!session.data
 
   return (
-    <div className="sticky top-0 z-20 hidden border-b border-line/70 bg-surface/70 backdrop-blur-2xl backdrop-saturate-150 lg:block">
-      <div className="relative flex min-h-[58px] items-center justify-between gap-3 px-8 py-2" ref={box}>
-        <div className="flex min-w-0 items-center gap-2 text-sm text-muted">
-          <span className="truncate" dir="auto">{fullName}</span>
-          <span aria-hidden="true">·</span>
-          <span className="truncate">{roles.map((r) => ROLE_LABEL[r]).join('، ')}</span>
-        </div>
+    <div className="pointer-events-none sticky top-0 z-20 hidden lg:block">
+      <div className="relative flex min-h-[58px] items-center justify-end gap-3 px-8 py-3.5" ref={box}>
 
         <ClockPill />
 
-        <div className="flex items-center gap-2">
+        <div className="glass glass--chrome pointer-events-auto flex items-center gap-1 rounded-full p-1.5">
           <div className="relative">
             <button type="button" className={BTN} aria-label="التنبيهات" aria-expanded={panel === 'bell'} onClick={() => toggle('bell')}>
               <Svg d={P.bell} />
-              {alerts > 0 && <span className="absolute -end-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-surface bg-danger" />}
+              {alerts > 0 && <span className="absolute -end-0.5 -top-0.5 h-3 w-3 rounded-full bg-danger [box-shadow:0_0_0_2px_var(--glass-thick)]" />}
             </button>
             <Popover open={panel === 'bell'} onClose={() => setPanel(null)} label="التنبيهات">
               <div className="w-72 space-y-1 text-sm">
@@ -283,9 +277,14 @@ export default function TopBar() {
             <Popover open={panel === 'theme'} onClose={() => setPanel(null)} label="المظهر">
               <div className="w-60 space-y-3 text-sm">
                 <button type="button" onClick={theme.toggle} aria-pressed={theme.dark}
-                  className="flex w-full items-center justify-between rounded-xl border border-line px-3 py-2 transition hover:bg-bg active:scale-[0.98]">
+                  className="flex w-full items-center justify-between rounded-full border border-line px-3.5 py-2 transition hover:bg-fill active:scale-[0.98]">
                   <span>{theme.dark ? 'الوضع الداكن' : 'الوضع الفاتح'}</span>
                   <Svg d={theme.dark ? P.moon : P.sun} />
+                </button>
+                <button type="button" onClick={theme.toggleSolid} aria-pressed={theme.solid} title="يلغي التمويه والخلفية لأداء أسرع على الأجهزة الضعيفة"
+                  className="flex w-full items-center justify-between rounded-full border border-line px-3.5 py-2 transition hover:bg-fill active:scale-[0.98]">
+                  <span>{theme.solid ? 'زجاج: متوقف (أداء)' : 'زجاج: مفعّل'}</span>
+                  <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${theme.solid ? 'bg-muted' : 'bg-ok'}`} />
                 </button>
                 <div>
                   <p className="mb-1.5 text-xs text-muted">لون النظام</p>
@@ -310,7 +309,7 @@ export default function TopBar() {
           </div>
 
           <button type="button" onClick={() => void qc.invalidateQueries()} aria-label="تحديث البيانات"
-            className="flex h-9 items-center gap-2 rounded-full border border-line bg-surface/80 px-4 text-sm text-fg/80 shadow-soft transition hover:bg-bg hover:text-fg active:scale-95">
+            className="flex h-9 items-center gap-2 rounded-full px-4 text-sm text-fg/80 transition hover:bg-fill-2 hover:text-fg active:scale-95">
             <Svg d={P.refresh} className={`h-4 w-4 ${spinning ? 'animate-spin' : ''}`} />
             تحديث
           </button>

@@ -11,16 +11,26 @@ export const ACCENTS = [
 const store = (k: string, v: string) => { try { localStorage.setItem(k, v) } catch { /* storage blocked */ } }
 const read = (k: string) => { try { return localStorage.getItem(k) } catch { return null } }
 
-/** Light / dark and accent colour. Saved in this browser only; public/theme.js applies it before first paint. */
+/** Light / dark, accent colour and solid (no blur) mode. Saved in this browser only; public/theme.js applies them before first paint. */
 export function useTheme() {
   const [dark, setDark] = useState(() => document.documentElement.getAttribute('data-theme') === 'dark')
   const [accent, setAccentState] = useState(() => read('accent') ?? ACCENTS[0].color)
+  const [solid, setSolid] = useState(() => document.documentElement.classList.contains('is-solid'))
 
   const toggle = useCallback(() => {
     setDark((d) => {
       const next = !d
       document.documentElement.setAttribute('data-theme', next ? 'dark' : 'light')
       store('theme', next ? 'dark' : 'light')
+      return next
+    })
+  }, [])
+
+  const toggleSolid = useCallback(() => {
+    setSolid((s) => {
+      const next = !s
+      document.documentElement.classList.toggle('is-solid', next)
+      store('solid', next ? '1' : '0')
       return next
     })
   }, [])
@@ -32,5 +42,5 @@ export function useTheme() {
     store('accent', color)
   }, [])
 
-  return { dark, toggle, accent, setAccent }
+  return { dark, toggle, accent, setAccent, solid, toggleSolid }
 }

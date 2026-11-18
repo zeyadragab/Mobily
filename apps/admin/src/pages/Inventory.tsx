@@ -134,7 +134,7 @@ export default function Inventory() {
         <div className="flex gap-1" role="tablist">
           {([['levels', 'الأرصدة'], ['moves', 'الحركات'], ['returns', `مرتجعات تحت الفحص${inspection.data?.length ? ` (${inspection.data.length})` : ''}`]] as const).map(([k, l]) => (
             <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
-              className={`rounded-lg px-3 py-2 text-sm ${tab === k ? 'bg-accent text-accent-fg' : 'border border-line'}`}>{l}</button>
+              className={`rounded-lg px-3 py-2 text-sm ${tab === k ? 'btn-gel' : 'border border-line'}`}>{l}</button>
           ))}
         </div>
         {tab === 'levels' && (

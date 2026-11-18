@@ -126,7 +126,7 @@ export default function ReturnDialog({ inv, onClose }: { inv: ReturnableInvoice;
                       const on = picked[l.id]?.includes(s) ?? false
                       const disabled = done.has(s)
                       return (
-                        <label key={s} className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1 font-mono text-xs ${on ? 'border-accent bg-accent text-accent-fg' : 'border-line'} ${disabled ? 'opacity-40' : ''}`} dir="ltr">
+                        <label key={s} className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1 font-mono text-xs ${on ? 'border-accent btn-gel' : 'border-line'} ${disabled ? 'opacity-40' : ''}`} dir="ltr">
                           <input type="checkbox" className="sr-only" disabled={disabled} checked={on}
                             onChange={(e) => setPicked({ ...picked, [l.id]: e.target.checked ? [...(picked[l.id] ?? []), s] : (picked[l.id] ?? []).filter((x) => x !== s) })} />
                           {s}{disabled && ' (مرتجع)'}

@@ -62,7 +62,7 @@ export default function CategoryManager({ open, onClose }: { open: boolean; onCl
             {cats.data?.map((c) => (
               <li key={c.id}>
                 <button type="button" onClick={() => { setSel(c.id); setRename(c.name); setErr(null) }}
-                  className={`flex w-full items-center justify-between rounded-[10px] px-3 py-2 text-start text-sm transition ${sel === c.id ? 'bg-accent text-accent-fg' : 'hover:bg-bg'}`}>
+                  className={`flex w-full items-center justify-between rounded-[10px] px-3 py-2 text-start text-sm transition ${sel === c.id ? 'btn-gel' : 'hover:bg-bg'}`}>
                   <span dir="auto">{c.name}</span>
                   <span className="text-xs opacity-70">{(fields.data ?? []).filter((x) => x.category_id === c.id).length || ''}</span>
                 </button>

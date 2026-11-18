@@ -110,7 +110,7 @@ export default function Bills() {
         <div role="tablist" aria-label="نوع العملية" className="mb-3 inline-flex rounded-xl border border-line bg-surface p-1 text-sm">
           {([['bill', 'دفع فاتورة / خدمة'], ['machine', 'سحب من ماكينة']] as [Tab, string][]).map(([k, l]) => (
             <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
-              className={`rounded-lg px-3 py-1.5 font-medium transition ${tab === k ? 'bg-accent text-accent-fg' : 'text-muted hover:text-fg'}`}>{l}</button>
+              className={`rounded-lg px-3 py-1.5 font-medium transition ${tab === k ? 'btn-gel' : 'text-muted hover:text-fg'}`}>{l}</button>
           ))}
         </div>
         {accounts.isLoading && <State kind="loading" />}
@@ -271,7 +271,7 @@ function BillForm({
       <div className="mb-3 flex flex-wrap gap-2" role="radiogroup" aria-label="الخدمة">
         {services.map((s) => (
           <button key={s.id} type="button" role="radio" aria-checked={serviceId === s.id} onClick={() => pick(s)}
-            className={`rounded-full border px-3 py-1.5 text-sm font-medium transition active:scale-[0.97] ${serviceId === s.id ? 'border-accent bg-accent text-accent-fg' : 'border-line bg-surface hover:bg-bg'}`}>
+            className={`rounded-full border px-3 py-1.5 text-sm font-medium transition active:scale-[0.97] ${serviceId === s.id ? 'border-accent btn-gel' : 'border-line bg-surface hover:bg-bg'}`}>
             {s.name}
           </button>
         ))}

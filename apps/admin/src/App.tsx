@@ -6,6 +6,8 @@ import { RequireRole } from './components/RequireRole'
 import { State } from './components/State'
 import Login from './pages/Login'
 import { NAV } from './lib/roles'
+import Wallpaper from './components/Wallpaper'
+import { usePointerFx } from './lib/fx'
 
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Products = lazy(() => import('./pages/Products'))
@@ -73,6 +75,16 @@ const PAGES: Record<string, React.ReactNode> = {
 }
 
 export default function App() {
+  usePointerFx()
+  return (
+    <>
+      <Wallpaper />
+      <AppRoutes />
+    </>
+  )
+}
+
+function AppRoutes() {
   const { session, loading, roles, canPage } = useAuth()
 
   if (loading) return <State kind="loading" />

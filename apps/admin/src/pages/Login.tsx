@@ -17,13 +17,13 @@ export default function Login() {
     setBusy(false)
   }
 
-  const field = 'w-full rounded-xl border border-line bg-surface px-3.5 py-3 text-base shadow-soft outline-none'
+  const field = 'w-full rounded-[14px] border border-line bg-surface px-3.5 py-3 text-base outline-none'
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <form
         onSubmit={submit}
-        className="w-full max-w-sm animate-rise space-y-4 rounded-[22px] border border-line/60 bg-surface/75 p-7 shadow-window backdrop-blur-2xl backdrop-saturate-150"
+        className="glass glass--thick w-full max-w-sm animate-rise space-y-4 rounded-[32px] p-7"
       >
         <div className="flex flex-col items-center gap-3 pb-1 text-center">
           <span className="flex h-16 w-16 items-center justify-center rounded-[18px] bg-gradient-to-b from-accent/80 to-accent text-accent-fg shadow-float">
@@ -56,7 +56,7 @@ export default function Login() {
         )}
         <button
           disabled={busy}
-          className="w-full rounded-xl bg-accent py-3 font-semibold text-accent-fg shadow-soft transition hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
+          className="btn-gel w-full rounded-full py-3 font-semibold active:scale-[0.98] disabled:opacity-50"
         >
           {busy ? 'جارٍ الدخول…' : 'دخول'}
         </button>

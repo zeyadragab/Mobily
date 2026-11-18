@@ -68,7 +68,7 @@ export default function Supply() {
       <div role="tablist" aria-label="أقسام التوريد" className="mb-4 flex flex-wrap gap-2">
         {tabs.map((t) => (
           <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)}
-            className={`rounded-lg border px-4 py-2 text-sm font-medium transition active:scale-[0.97] ${tab === t.key ? 'border-accent bg-accent text-accent-fg' : 'border-line bg-surface'}`}>{t.label}</button>
+            className={`rounded-lg border px-4 py-2 text-sm font-medium transition active:scale-[0.97] ${tab === t.key ? 'border-accent btn-gel' : 'border-line bg-surface'}`}>{t.label}</button>
         ))}
       </div>
       {tab === 'new' && <SupplyWizard key={wizardKey} onDone={() => { setWizardKey((k) => k + 1); setTab('log') }} />}

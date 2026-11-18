@@ -41,7 +41,7 @@ export default function Maintenance() {
       <PageHeader title="لوحة الصيانة" subtitle="الفني يفحص الجهاز ويسعّره، والمدير يوافق على القطع الناقصة، والكاشير يبلّغ العميل." />
       <div role="tablist" className="mb-4 flex flex-wrap gap-2">
         {tabs.map((item) => <button key={item.key} role="tab" aria-selected={tab === item.key} onClick={() => setTab(item.key)}
-          className={`rounded-lg border px-4 py-2 text-sm font-medium ${tab === item.key ? 'border-accent bg-accent text-accent-fg' : 'border-line bg-surface'}`}>{item.label}</button>)}
+          className={`rounded-lg border px-4 py-2 text-sm font-medium ${tab === item.key ? 'border-accent btn-gel' : 'border-line bg-surface'}`}>{item.label}</button>)}
       </div>
       {tab === 'work' && <WorkQueue />}
       {tab === 'requests' && <PartRequests query={requests} canManage={canManage} />}

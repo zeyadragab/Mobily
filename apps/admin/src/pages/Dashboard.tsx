@@ -97,7 +97,7 @@ function OwnerSection() {
       <div className="flex flex-wrap items-center gap-2">
         {([['today', 'اليوم'], ['month', 'الشهر حتى الآن'], ['custom', 'فترة مخصصة']] as const).map(([k, l]) => (
           <button key={k} aria-pressed={preset === k} onClick={() => setPreset(k)}
-            className={`rounded-lg px-3 py-2 text-sm ${preset === k ? 'bg-accent text-accent-fg' : 'border border-line bg-surface'}`}>{l}</button>
+            className={`rounded-lg px-3 py-2 text-sm ${preset === k ? 'btn-gel' : 'border border-line bg-surface'}`}>{l}</button>
         ))}
         {preset === 'custom' && (
           <>

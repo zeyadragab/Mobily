@@ -72,7 +72,7 @@ export default function Installments() {
       <div role="tablist" className="mb-3 flex flex-wrap gap-2">
         {([['due', 'الأقساط'], ['plans', 'الخطط'], ['collections', 'سجل التحصيل']] as const).map(([k, l]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
-            className={`rounded-full border px-4 py-1.5 text-sm ${tab === k ? 'border-accent bg-accent text-accent-fg' : 'border-line bg-surface'}`}>{l}</button>
+            className={`rounded-full border px-4 py-1.5 text-sm ${tab === k ? 'border-accent btn-gel' : 'border-line bg-surface'}`}>{l}</button>
         ))}
       </div>
 

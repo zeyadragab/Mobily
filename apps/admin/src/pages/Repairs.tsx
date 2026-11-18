@@ -87,7 +87,7 @@ export default function Repairs() {
         </>} />
       <div role="tablist" aria-label="أقسام الصيانة" className="mb-4 flex flex-wrap gap-2">
         {TABS.map((item) => <button key={item.key} role="tab" aria-selected={tab === item.key} onClick={() => setTab(item.key)}
-          className={`rounded-lg border px-4 py-2 text-sm font-medium ${tab === item.key ? 'border-accent bg-accent text-accent-fg' : 'border-line bg-surface'}`}>{item.label}</button>)}
+          className={`rounded-lg border px-4 py-2 text-sm font-medium ${tab === item.key ? 'border-accent btn-gel' : 'border-line bg-surface'}`}>{item.label}</button>)}
       </div>
       {tab === 'board' && <RepairBoard branchId={branchId} onOpen={setSelected} />}
       {tab === 'history' && <RepairHistory onOpen={setSelected} />}

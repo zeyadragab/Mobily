@@ -226,8 +226,8 @@ function CustomerAccount({ customer, onClose, onEdit }: { customer: Customer; on
         </Card>}
 
         <div role="tablist" className="flex gap-2">
-          <button role="tab" aria-selected={tab === 'ledger'} onClick={() => setTab('ledger')} className={`rounded-[10px] px-4 py-1.5 text-sm font-medium transition ${tab === 'ledger' ? 'bg-accent text-accent-fg' : 'bg-bg'}`}>كشف الحساب</button>
-          {canKyc && <button role="tab" aria-selected={tab === 'kyc'} onClick={() => setTab('kyc')} className={`rounded-[10px] px-4 py-1.5 text-sm font-medium transition ${tab === 'kyc' ? 'bg-accent text-accent-fg' : 'bg-bg'}`}>بيانات التحقق والضامن</button>}
+          <button role="tab" aria-selected={tab === 'ledger'} onClick={() => setTab('ledger')} className={`rounded-[10px] px-4 py-1.5 text-sm font-medium transition ${tab === 'ledger' ? 'btn-gel' : 'bg-bg'}`}>كشف الحساب</button>
+          {canKyc && <button role="tab" aria-selected={tab === 'kyc'} onClick={() => setTab('kyc')} className={`rounded-[10px] px-4 py-1.5 text-sm font-medium transition ${tab === 'kyc' ? 'btn-gel' : 'bg-bg'}`}>بيانات التحقق والضامن</button>}
         </div>
 
         {tab === 'ledger' && <>

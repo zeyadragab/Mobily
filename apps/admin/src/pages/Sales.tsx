@@ -378,7 +378,7 @@ function NewInvoice({ onClose, initial }: { onClose: () => void; initial: Held |
         <div role="group" aria-label="نوع السعر" className="flex gap-2 text-sm">
           {([['retail', 'سعر التجزئة'], ['wholesale', 'سعر الجملة']] as const).map(([k, l]) => (
             <button key={k} type="button" aria-pressed={priceMode === k} onClick={() => setPriceMode(k)}
-              className={`rounded-lg border px-3 py-1.5 transition active:scale-[0.97] ${priceMode === k ? 'border-accent bg-accent text-accent-fg' : 'border-line bg-surface'}`}>{l}</button>
+              className={`rounded-lg border px-3 py-1.5 transition active:scale-[0.97] ${priceMode === k ? 'border-accent btn-gel' : 'border-line bg-surface'}`}>{l}</button>
           ))}
           <Button small type="button" className="ms-auto" onClick={() => setUncForm({ name: '', qty: '1', price: '', cost: '', reason: '' })}>+ صنف بدون كود</Button>
         </div>

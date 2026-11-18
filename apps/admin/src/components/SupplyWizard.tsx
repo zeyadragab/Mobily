@@ -127,7 +127,7 @@ export default function SupplyWizard({ onDone }: { onDone: () => void }) {
       <ol className="flex flex-wrap gap-2 text-sm" aria-label="خطوات التوريد">
         {steps.map((s, i) => (
           <li key={s} aria-current={step === i + 1 ? 'step' : undefined}
-            className={`rounded-full border px-3 py-1 ${step === i + 1 ? 'border-accent bg-accent text-accent-fg' : step > i + 1 ? 'border-ok/40 text-ok' : 'border-line text-muted'}`}>{i + 1}. {s}</li>
+            className={`rounded-full border px-3 py-1 ${step === i + 1 ? 'border-accent btn-gel' : step > i + 1 ? 'border-ok/40 text-ok' : 'border-line text-muted'}`}>{i + 1}. {s}</li>
         ))}
       </ol>
       <ErrorText error={err} />

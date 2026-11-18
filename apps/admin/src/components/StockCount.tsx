@@ -120,7 +120,7 @@ export default function StockCount() {
           {lines.isLoading && <State kind="loading" />}
           <div className="max-h-[28rem] overflow-auto rounded-xl border border-line">
             <table className="w-full min-w-[640px] text-sm">
-              <thead className="sticky top-0 bg-surface text-muted"><tr className="border-b border-line">
+              <thead className="sticky top-0 bg-[var(--glass-thick)] text-muted"><tr className="border-b border-line">
                 {['الصنف', 'بالنظام', 'المعدود', 'الفرق', 'السبب'].map((h) => <th key={h} scope="col" className="p-2 text-start font-medium">{h}</th>)}
               </tr></thead>
               <tbody>
