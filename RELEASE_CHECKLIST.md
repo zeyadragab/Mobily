@@ -95,3 +95,12 @@ Approved by: (blank until a human approves)
 7. (Assistant) Connect error monitoring (Sentry) once an account exists.
 8. (Both) Create a staging Supabase project; keep production clean; remove demo data and test accounts.
 9. (Assistant) Nonce-based enforcing CSP; restrict image hosts.
+
+---
+## Re-check after Phase 13 (2026-11-19, Claude Code, commit fae642e, 21 commits on main)
+- Secrets: pattern scan over admin/storefront source, supabase, docs -> only `service_role` role names in SQL tests and one grant in 0010 (no keys). gitleaks was NOT re-run (binary not installed on this machine) -> still to do.
+- Dependencies: `npm audit --omit=dev` admin 0, storefront 0.
+- Static/build: admin and storefront `tsc --noEmit` clean; storefront eslint clean and `next build` OK; admin `vite build` OK, oxlint 0 errors (6 warnings, same kinds as before); admin vitest 4/4.
+- Phase 13 code: print templates build HTML through `escapeHtml` for every interpolation (no unescaped `${}` in receipts.ts); WhatsApp links use fixed `wa.me` host + `encodeURIComponent`, opener cleared; no `innerHTML`/`dangerouslySetInnerHTML`/`eval` in admin source.
+- NOT done: paper print test; SQL test results for 0040 beyond settings test 8/8 on staging; sections 6/6A/7 open items above are unchanged.
+- Recommendation: still BLOCKED (same High findings: MFA/password policy evidence, role click-through, backups, monitoring, staging separation).
