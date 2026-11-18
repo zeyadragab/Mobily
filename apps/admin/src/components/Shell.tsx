@@ -7,6 +7,7 @@ import { useTheme } from '../lib/theme'
 import { useRouteFx } from '../lib/fx'
 import TopBar, { AlertBanner } from './TopBar'
 import IdleLock from './IdleLock'
+import { hiddenByModules, useStoreSettings } from '../lib/store'
 
 type Item = (typeof NAV)[number]
 
@@ -79,7 +80,9 @@ export default function Shell() {
     return () => window.removeEventListener('keydown', onKey)
   }, [open])
 
-  const items = NAV.filter((n) => hasRole(...n.roles) && canPage(n.to))
+  const store = useStoreSettings()
+  const hiddenModules = hiddenByModules(store.data)
+  const items = NAV.filter((n) => hasRole(...n.roles) && canPage(n.to) && !hiddenModules.has(n.to))
   const groups = [...new Set(items.map((i) => i.group))]
   const current = items.find((n) => (n.to === '/' ? pathname === '/' : pathname.startsWith(n.to)))
 

@@ -41,6 +41,8 @@ const Attendance = lazy(() => import('./pages/Attendance'))
 const Team = lazy(() => import('./pages/Team'))
 const MobileTax = lazy(() => import('./pages/MobileTax'))
 const Reports = lazy(() => import('./pages/Reports'))
+const Settings = lazy(() => import('./pages/Settings'))
+const Campaigns = lazy(() => import('./pages/Campaigns'))
 
 const PAGES: Record<string, React.ReactNode> = {
   '/supplier-accounts': <SupplierAccounts />,
@@ -74,6 +76,8 @@ const PAGES: Record<string, React.ReactNode> = {
   '/team': <Team />,
   '/mobile-tax': <MobileTax />,
   '/reports': <Reports />,
+  '/settings': <Settings />,
+  '/campaigns': <Campaigns />,
 }
 
 export default function App() {

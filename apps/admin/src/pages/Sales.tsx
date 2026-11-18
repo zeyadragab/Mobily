@@ -16,6 +16,8 @@ import SerialPicker from '../components/SerialPicker'
 import { AccountSelect } from '../components/SourcePicker'
 import ApproverPin from '../components/ApproverPin'
 import { offerOpen, previewOffer, useOffers } from '../lib/offers'
+import { printSaleInvoice, saleWhatsApp } from '../lib/receipts'
+import { useStoreSettings } from '../lib/store'
 
 type Invoice = {
   id: string
@@ -107,6 +109,23 @@ export default function Sales() {
   const done = rows.filter((r) => r.status === 'completed')
   const dayTotal = done.reduce((s, r) => s + toMinor(r.total), 0)
   const inv = q.data?.find((i) => i.id === viewId)
+  const store = useStoreSettings()
+  const custBalance = useQuery({
+    queryKey: ['customer-balance', inv?.customer_id ?? null],
+    enabled: !!inv?.customer_id,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('customer_balances').select('balance').eq('customer_id', inv!.customer_id!).maybeSingle()
+      if (error) throw error
+      return data ? Number(toMinor(String(data.balance))) : 0
+    },
+  })
+  const saleDoc = inv ? {
+    invoice_number: inv.invoice_number, created_at: inv.created_at, customer_name: inv.customer_name, customer_phone: inv.customer_phone,
+    subtotal: inv.subtotal, discount: inv.discount, total: inv.total, notes: inv.notes, balance: custBalance.data ?? null,
+    lines: inv.sales_invoice_lines.map((l) => ({ name: l.name_snapshot, qty: l.qty, unit_price: l.unit_price, serials: l.serials })),
+    payments: inv.sales_payments.map((p) => ({ label: SALE_METHOD_AR[p.method], amount: p.amount })),
+  } : null
+  const waUrl = saleDoc ? saleWhatsApp(saleDoc, store.data?.store_name ?? '') : null
 
   return (
     <div>
@@ -186,6 +205,9 @@ export default function Sales() {
       <Modal open={!!inv && !returning} onClose={() => setViewId(null)} title={inv ? `فاتورة ${inv.invoice_number}` : ''}
         footer={<>
           {inv && inv.status === 'completed' && canSell && <Button className="me-auto" onClick={() => setReturning(true)}>إرجاع أصناف</Button>}
+          {saleDoc && inv?.status === 'completed' && <Button onClick={() => printSaleInvoice(saleDoc, store.data?.show_previous_balance ?? true)}>طباعة</Button>}
+          {waUrl && inv?.status === 'completed' && <a href={waUrl} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center justify-center rounded-[10px] border border-line bg-surface px-4 py-2.5 text-sm font-medium shadow-soft hover:bg-bg">واتساب</a>}
           <Button onClick={() => setViewId(null)}>إغلاق</Button>
         </>}>
         {inv && (

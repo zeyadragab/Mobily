@@ -205,7 +205,7 @@ export function printWalletReceipt(op: WalletOp, walletName: string, customerNam
       ${row('الحالة', WALLET_STATUS[op.status])}
       ${op.note ? row('ملاحظة', op.note) : ''}
     </table>
-    <p class="muted">شكرًا لتعاملكم معنا</p>`)
+    <p class="muted">شكرًا لتعاملكم معنا</p>`, { footer: 'wallet' })
 }
 
 /** One receipt for one bill group (a repeated bill prints as one receipt with every number). */
@@ -231,5 +231,5 @@ export function printBillReceipt(ops: BillOp[], accountName: string, customerNam
         : row(first.pay === 'credit' ? 'على حساب العميل' : 'المدفوع نقدًا', formatEGP((a + c) * n))}
       ${first.status === 'cancelled' ? row('الحالة', BILL_STATUS.cancelled) : ''}
     </table>
-    <p class="muted">شكرًا لتعاملكم معنا</p>`)
+    <p class="muted">شكرًا لتعاملكم معنا</p>`, { footer: 'bill' })
 }

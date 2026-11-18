@@ -13,6 +13,7 @@ import {
   type InstallmentRow, type PayMethod,
 } from '../lib/installments'
 import { formatEGP, toMinor } from '../lib/money'
+import { printInstallmentReceipt } from '../lib/receipts'
 import { downloadCsv } from '../lib/repairs'
 import { supabase } from '../lib/supabase'
 import { cairoBusinessDate, formatCairo } from '../lib/time'
@@ -134,7 +135,7 @@ export default function Installments() {
             <td className="p-3" dir="auto">{c.customers?.name}</td><td className="p-3">{m(c.amount)}</td><td className="p-3">{PAY_METHODS[c.method]}</td>
             <td className="p-3">{formatCairo(c.created_at)}</td>
             <td className="p-3">{c.status === 'cancelled' ? <Chip tone="danger">ملغي</Chip> : <Chip tone="ok">تم</Chip>}{c.cancel_reason && <p className="text-xs text-muted" dir="auto">{c.cancel_reason}</p>}</td>
-            <td className="p-3">{boss && c.status === 'active' && <Button small variant="danger" onClick={() => setCancelCol({ id: c.id, no: c.receipt_no })}>إلغاء</Button>}</td>
+            <td className="p-3"><div className="flex gap-2">{c.status === 'active' && <Button small onClick={() => printInstallmentReceipt({ receipt_no: c.receipt_no, plan_no: c.installment_plans?.plan_no ?? null, customer: c.customers?.name ?? null, amount: c.amount, method: PAY_METHODS[c.method], created_at: c.created_at })}>طباعة</Button>}{boss && c.status === 'active' && <Button small variant="danger" onClick={() => setCancelCol({ id: c.id, no: c.receipt_no })}>إلغاء</Button>}</div></td>
           </tr>)}</tbody>
         </table></Card>}
       </>}

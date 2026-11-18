@@ -6,6 +6,7 @@ import { formatEGP, toMinor } from '../lib/money'
 import { cairoBusinessDate, formatCairo } from '../lib/time'
 import { downloadCsv } from '../lib/repairs'
 import { Button, Card, Chip, ErrorText, Field, inputCls, PageHeader } from '../components/ui'
+import { printReturnReceipt } from '../lib/receipts'
 import { State } from '../components/State'
 import ReturnDialog, { type ReturnableInvoice } from '../components/ReturnDialog'
 
@@ -104,7 +105,7 @@ function Archive() {
       {shown.length > 0 && (
         <Card className="overflow-x-auto">
           <table className="w-full min-w-[820px] text-sm">
-            <thead className="text-muted"><tr className="border-b border-line">{['المرتجع', 'الفاتورة', 'العميل', 'الأصناف', 'المدفوع', 'من الدين', 'الخصم', 'السبب', 'الحالة'].map((h) => <th key={h} scope="col" className="p-3 text-start font-medium">{h}</th>)}</tr></thead>
+            <thead className="text-muted"><tr className="border-b border-line">{['المرتجع', 'الفاتورة', 'العميل', 'الأصناف', 'المدفوع', 'من الدين', 'الخصم', 'السبب', 'الحالة', ''].map((h, i) => <th key={i} scope="col" className="p-3 text-start font-medium">{h}</th>)}</tr></thead>
             <tbody>
               {shown.map((r) => (
                 <tr key={r.id} className="border-b border-line last:border-0">
@@ -117,6 +118,7 @@ function Archive() {
                   <td className="p-3">{toMinor(r.manual_reduction) ? formatEGP(toMinor(r.manual_reduction)) : '—'}</td>
                   <td className="p-3" dir="auto">{r.reason}</td>
                   <td className="p-3"><Chip tone={STATUS[r.status].t}>{STATUS[r.status].l}</Chip></td>
+                  <td className="p-3">{r.status === 'completed' && <Button small onClick={() => printReturnReceipt({ ...r, refund_label: METHOD_LABEL[r.refund_method] })}>طباعة</Button>}</td>
                 </tr>
               ))}
             </tbody>

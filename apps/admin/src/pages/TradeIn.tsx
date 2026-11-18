@@ -13,6 +13,7 @@ import { money, TRADE_PAY, useTrackedVariants, useTradeIns, type TradeIn as Trad
 import { formatEGP, toMinor } from '../lib/money'
 import { downloadCsv } from '../lib/repairs'
 import { supabase } from '../lib/supabase'
+import { printTradeInContract } from '../lib/receipts'
 import { cairoBusinessDate, formatCairo } from '../lib/time'
 
 const m = (v: number | string) => formatEGP(toMinor(v))
@@ -65,7 +66,7 @@ export default function TradeIn() {
           <td className="p-3">{TRADE_PAY[t.pay]}</td>
           <td className="p-3" dir="auto">{t.seller_name}{t.seller_phone && <p className="text-xs text-muted"><bdi>{t.seller_phone}</bdi></p>}</td>
           <td className="p-3">{t.status === 'cancelled' ? <Chip tone="danger">ملغي</Chip> : <Chip tone="ok">في المخزن</Chip>}{t.cancel_reason && <p className="text-xs text-muted" dir="auto">{t.cancel_reason}</p>}</td>
-          <td className="p-3">{boss && t.status === 'active' && <Button small variant="danger" onClick={() => setCancel(t)}>إلغاء</Button>}</td>
+          <td className="p-3"><div className="flex gap-2">{t.status === 'active' && <Button small onClick={() => printTradeInContract({ trade_no: t.trade_no, created_at: t.created_at, product: t.variants?.products?.name ?? '', serial: t.serial, price: t.price, seller_name: t.seller_name, seller_phone: t.seller_phone, condition_note: t.condition_note })}>عقد</Button>}{boss && t.status === 'active' && <Button small variant="danger" onClick={() => setCancel(t)}>إلغاء</Button>}</div></td>
         </tr>)}</tbody>
       </table></Card>}
 

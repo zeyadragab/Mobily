@@ -8,6 +8,7 @@ import {
   cairoDateTimeInput, NEXT_REPAIR_STATUS, PART_REQUEST_STATUS, repairNumber, REPAIR_STATUS,
   type RepairBranch, type RepairDetail, type RepairEvent, type RepairOrderPart, type RepairPartRequest,
 } from '../lib/repairs'
+import { printRepairReceipt } from '../lib/receipts'
 import CustomerContact from './CustomerContact'
 import RepairMoney from './RepairMoney'
 import RepairQuoteForm from './RepairQuoteForm'
@@ -89,6 +90,7 @@ export default function RepairOrderDialog({ id, branches, onClose }: {
           <h3 className="text-lg font-semibold" dir="auto">{order.device_model}</h3>
           <Chip tone={order.status === 'ready' || order.status === 'delivered' ? 'ok' : 'info'}>{REPAIR_STATUS[order.status]}</Chip>
           {order.device_id && <Chip>مرتبط بجهاز مباع من الفرع</Chip>}
+          <Button small className="ms-auto" onClick={() => printRepairReceipt({ number: repairNumber(order.order_number), received_at: order.received_at, due_at: order.due_at, customer_name: order.customer_name, customer_phone: order.customer_phone, device_model: order.device_model, serial: order.serial, imei1: order.imei1, complaint: order.complaint, intake_condition: order.intake_condition, accessories: order.accessories, quote_total: order.quote_total, warranty_days: order.warranty_days })}>طباعة إيصال</Button>
         </div>
         <dl className="grid gap-3 text-sm sm:grid-cols-2">
           {[
