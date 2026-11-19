@@ -43,6 +43,7 @@ export const NAV: { to: string; label: string; icon: string; roles: AppRole[]; g
   { to: '/trade-in', label: 'المستعمل والتبديل', icon: 'box', roles: ['owner', 'manager', 'cashier'], group: 'التشغيل اليومي' },
   { to: '/inout', label: 'داخل وخارج', icon: 'swap', roles: ['owner', 'manager'], group: 'التشغيل اليومي' },
   { to: '/installments', label: 'الأقساط', icon: 'coins', roles: ['owner', 'manager', 'cashier'], group: 'التشغيل اليومي' },
+  { to: '/notifications', label: 'التنبيهات والمهام', icon: 'check', roles: ['owner', 'manager', 'cashier', 'accountant', 'warehouse'], group: 'الإدارة' },
   { to: '/mobile-tax', label: 'ضريبة الموبايل', icon: 'log', roles: ['owner', 'manager', 'cashier'], group: 'الإدارة' },
   { to: '/attendance', label: 'الحضور والانصراف', icon: 'check', roles: [...ALL, 'technician'], group: 'الإدارة' },
   { to: '/team', label: 'إدارة الفريق', icon: 'users', roles: ['owner', 'manager'], group: 'الإدارة' },

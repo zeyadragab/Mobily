@@ -12,7 +12,13 @@ type AuthState = {
   canPage: (path: string) => boolean
   hasRole: (...r: AppRole[]) => boolean
   signOut: () => Promise<void>
+  /** true while the user arrived from a password-recovery email and must set a new password */
+  recovery: boolean
+  endRecovery: () => void
 }
+
+// The recovery link lands with #...&type=recovery; read it before supabase-js clears the hash.
+const arrivedViaRecovery = typeof window !== 'undefined' && /[#&]type=recovery(&|$)/.test(window.location.hash)
 
 const Ctx = createContext<AuthState | null>(null)
 
@@ -22,13 +28,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [fullName, setFullName] = useState('')
   const [denied, setDenied] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
+  const [recovery, setRecovery] = useState(arrivedViaRecovery)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
       if (!data.session) setLoading(false)
     })
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((e, s) => {
+      if (e === 'PASSWORD_RECOVERY') setRecovery(true)
       setSession(s)
       if (!s) {
         setRoles([])
@@ -91,6 +99,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signOut: async () => {
       await supabase.auth.signOut()
     },
+    recovery,
+    endRecovery: () => setRecovery(false),
   }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

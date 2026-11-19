@@ -7,6 +7,21 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [info, setInfo] = useState<string | null>(null)
+
+  async function forgot() {
+    setError(null)
+    setInfo(null)
+    if (!email) {
+      setError('اكتب البريد الإلكتروني أولاً.')
+      return
+    }
+    setBusy(true)
+    await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin })
+    setBusy(false)
+    // Same message whether or not the account exists, so the form can't be used to probe emails.
+    setInfo('لو الحساب موجود هيوصلك رابط لتغيير كلمة المرور على بريدك.')
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -54,11 +69,19 @@ export default function Login() {
             {error}
           </p>
         )}
+        {info && (
+          <p role="status" className="rounded-xl border border-line bg-surface px-3 py-2 text-sm text-muted">
+            {info}
+          </p>
+        )}
         <button
           disabled={busy}
           className="btn-gel w-full rounded-full py-3 font-semibold active:scale-[0.98] disabled:opacity-50"
         >
           {busy ? 'جارٍ الدخول…' : 'دخول'}
+        </button>
+        <button type="button" onClick={forgot} disabled={busy} className="w-full text-center text-sm text-muted underline disabled:opacity-50">
+          نسيت كلمة المرور؟
         </button>
       </form>
     </div>

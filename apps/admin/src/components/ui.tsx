@@ -308,6 +308,10 @@ const ERR: [RegExp, string][] = [
   [/reminder not found/i, 'التذكير غير موجود.'],
   [/invalid imei/i, 'رقم IMEI غير صحيح (15 رقمًا).'],
   [/invalid customer name/i, 'اكتب اسم العميل.'],
+  [/invalid task/i, 'بيانات المهمة غير صحيحة.'],
+  [/task not found/i, 'المهمة غير موجودة.'],
+  [/task already closed/i, 'المهمة منتهية بالفعل.'],
+  [/notification not found/i, 'التنبيه غير موجود.'],
 ]
 export function translateError(m: string) {
   const known = ERR.find(([re]) => re.test(m))?.[1]

@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
 import { useOpenSession } from '../lib/data'
 import { shiftLabel } from '../lib/drawers'
+import { useNotifications, useUnreadCount } from '../lib/notifications'
 import { ACCENTS, WALLS, useTheme } from '../lib/theme'
 
 type Panel = 'bell' | 'tasks' | 'theme' | 'calc' | null
@@ -203,7 +204,10 @@ export default function TopBar() {
     return () => { document.removeEventListener('mousedown', down); document.removeEventListener('keydown', key) }
   }, [panel])
 
+  const unread = useUnreadCount()
+  const recent = useNotifications(6)
   const alerts = counts.data?.alerts ?? 0
+  const unreadN = unread.data ?? 0
   const approvals = counts.data?.approvals ?? 0
   const toggle = (p: Exclude<Panel, null>) => setPanel((cur) => (cur === p ? null : p))
   const open = !!session.data
@@ -218,12 +222,22 @@ export default function TopBar() {
           <div className="relative">
             <button type="button" className={BTN} aria-label="التنبيهات" aria-expanded={panel === 'bell'} onClick={() => toggle('bell')}>
               <Svg d={P.bell} />
-              {alerts > 0 && <span className="absolute -end-0.5 -top-0.5 h-3 w-3 rounded-full bg-danger [box-shadow:0_0_0_2px_var(--glass-thick)]" />}
+              {alerts + unreadN > 0 && <span className="absolute -end-0.5 -top-0.5 h-3 w-3 rounded-full bg-danger [box-shadow:0_0_0_2px_var(--glass-thick)]" />}
             </button>
             <Popover open={panel === 'bell'} onClose={() => setPanel(null)} label="التنبيهات">
               <div className="w-72 space-y-1 text-sm">
                 <p className="px-1 pb-1 font-semibold">التنبيهات</p>
-                {alerts === 0 && <p className="px-1 py-3 text-center text-muted">لا توجد تنبيهات جديدة.</p>}
+                {alerts === 0 && (recent.data ?? []).length === 0 && <p className="px-1 py-3 text-center text-muted">لا توجد تنبيهات جديدة.</p>}
+                {(recent.data ?? []).map((n) => (
+                  <Link key={n.id} to={n.link ?? '/notifications'} onClick={() => setPanel(null)}
+                    className={`block rounded-xl px-3 py-2 hover:bg-fill-2 ${n.read ? 'opacity-60' : ''}`}>
+                    <span className={`block ${n.read ? '' : 'font-semibold'}`} dir="auto">{n.title}</span>
+                    {n.body && <span className="block truncate text-xs text-muted" dir="auto">{n.body}</span>}
+                  </Link>
+                ))}
+                <Link to="/notifications" onClick={() => setPanel(null)} className="block px-1 pt-1 text-center text-xs font-semibold underline underline-offset-4">
+                  كل التنبيهات والمهام ‹{unreadN > 0 ? ` (${unreadN} غير مقروء)` : ''}
+                </Link>
                 {alerts > 0 && (
                   <Link to="/accounts" onClick={() => setPanel(null)} className="flex items-center justify-between rounded-xl bg-danger/10 px-3 py-2 text-danger hover:bg-danger/15">
                     <span>تنبيهات عجز الورديات</span><b>{alerts}</b>

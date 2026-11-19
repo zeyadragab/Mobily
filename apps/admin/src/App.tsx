@@ -5,6 +5,7 @@ import Shell from './components/Shell'
 import { RequireRole } from './components/RequireRole'
 import { State } from './components/State'
 import Login from './pages/Login'
+import ResetPassword from './pages/ResetPassword'
 import { NAV } from './lib/roles'
 import Wallpaper from './components/Wallpaper'
 import { usePointerFx } from './lib/fx'
@@ -43,6 +44,7 @@ const MobileTax = lazy(() => import('./pages/MobileTax'))
 const Reports = lazy(() => import('./pages/Reports'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Campaigns = lazy(() => import('./pages/Campaigns'))
+const Notifications = lazy(() => import('./pages/Notifications'))
 
 const PAGES: Record<string, React.ReactNode> = {
   '/supplier-accounts': <SupplierAccounts />,
@@ -78,6 +80,7 @@ const PAGES: Record<string, React.ReactNode> = {
   '/reports': <Reports />,
   '/settings': <Settings />,
   '/campaigns': <Campaigns />,
+  '/notifications': <Notifications />,
 }
 
 export default function App() {
@@ -91,8 +94,9 @@ export default function App() {
 }
 
 function AppRoutes() {
-  const { session, loading, roles, canPage } = useAuth()
+  const { session, loading, roles, canPage, recovery } = useAuth()
 
+  if (recovery && session) return <ResetPassword />
   if (loading) return <State kind="loading" />
   if (!session) {
     return (
